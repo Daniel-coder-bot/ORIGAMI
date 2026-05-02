@@ -1,11 +1,9 @@
 
-export type RolTrabajador = 'administrador' | 'operario' | 'supervisor';
-
 export interface Trabajador {
   id: string;
   nombre: string;
   correo: string;
-  rol: RolTrabajador;
+  rol: string;
   activo: boolean;
   fechaRegistro: string;
   telefono?: string;
@@ -16,7 +14,7 @@ export interface Articulo {
   codigo: string;
   nombre: string;
   descripcion: string;
-  unidad: string; // kg, unidades, litros, etc.
+  unidad: string;
   categoria: string;
   stockActual: number;
   stockMinimo: number;
