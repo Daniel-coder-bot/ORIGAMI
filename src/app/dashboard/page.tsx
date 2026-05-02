@@ -1,8 +1,8 @@
+
 "use client"
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { 
-  UserRound, 
   Box, 
   ArrowUpRight, 
   ArrowDownRight,
@@ -21,9 +21,8 @@ import {
   ChartTooltipContent 
 } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, XAxis, ResponsiveContainer } from "recharts"
-import { useFirestore, useCollection } from '@/firebase'
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, query, orderBy, limit } from 'firebase/firestore'
-import { useMemoFirebase } from '@/firebase/use-memo-firebase'
 
 const chartConfig = {
   stock: {
@@ -36,13 +35,16 @@ export default function DashboardPage() {
   const db = useFirestore()
   const [barSize, setBarSize] = useState(32)
   
-  const materialesRef = useMemoFirebase(() => db ? collection(db, 'materiales') : null, [db])
+  const articulosRef = useMemoFirebase(() => db ? collection(db, 'articulos') : null, [db])
   const movimientosRecientesRef = useMemoFirebase(() => 
-    db ? query(collection(db, 'movimientos'), orderBy('fecha', 'desc'), limit(5)) : null, 
+    db ? query(collection(db, 'movimientosStock'), orderBy('fecha', 'desc'), limit(5)) : null, 
   [db])
 
-  const { data: materiales = [], loading: loadingMat } = useCollection(materialesRef)
-  const { data: movimientos = [], loading: loadingMov } = useCollection(movimientosRecientesRef)
+  const { data: articulosData, loading: loadingArt } = useCollection(articulosRef)
+  const { data: movimientosData, loading: loadingMov } = useCollection(movimientosRecientesRef)
+
+  const articulos = articulosData || []
+  const movimientos = movimientosData || []
 
   useEffect(() => {
     const updateBarSize = () => {
@@ -54,15 +56,15 @@ export default function DashboardPage() {
   }, [])
 
   const stats = useMemo(() => {
-    const totalStock = materiales.reduce((acc, m) => acc + (m.stockActual || 0), 0)
-    const stockBajo = materiales.filter(m => (m.stockActual || 0) <= (m.stockMinimo || 5))
+    const totalStock = articulos.reduce((acc, m) => acc + (Number(m.stockActual) || 0), 0)
+    const stockBajo = articulos.filter(m => (Number(m.stockActual) || 0) <= (Number(m.stockMinimo) || 5))
     return {
-      totalArticulos: materiales.length,
+      totalArticulos: articulos.length,
       totalStock,
       bajoStockCount: stockBajo.length,
       articulosBajoStock: stockBajo
     }
-  }, [materiales])
+  }, [articulos])
 
   const chartData = [
     { mes: "Ene", stock: 400 },
@@ -103,7 +105,7 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl md:text-3xl font-black">{loadingMat ? "..." : stats.totalArticulos}</div>
+            <div className="text-2xl md:text-3xl font-black">{loadingArt ? "..." : stats.totalArticulos}</div>
             <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Catálogo en sistema</p>
           </CardContent>
         </Card>
@@ -116,7 +118,7 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl md:text-3xl font-black">{loadingMat ? "..." : stats.totalStock}</div>
+            <div className="text-2xl md:text-3xl font-black">{loadingArt ? "..." : stats.totalStock}</div>
             <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Unidades totales</p>
           </CardContent>
         </Card>
@@ -138,14 +140,14 @@ export default function DashboardPage() {
 
         <Card className="border-none bg-white shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Movimientos Hoy</CardTitle>
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Movimientos</CardTitle>
             <div className="p-1.5 rounded-lg bg-primary/5 text-primary">
               <Clock strokeWidth={1.5} className="h-4 w-4" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl md:text-3xl font-black">{movimientos.length}</div>
-            <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Últimos registros</p>
+            <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Recientes</p>
           </CardContent>
         </Card>
       </div>
@@ -200,13 +202,13 @@ export default function DashboardPage() {
                     {mov.tipo === 'entrada' ? <ArrowUpRight strokeWidth={2} className="h-4 w-4" /> : <ArrowDownRight strokeWidth={2} className="h-4 w-4" />}
                   </div>
                   <div className="space-y-0.5 min-w-0 flex-1">
-                    <p className="font-bold leading-none truncate group-hover:text-primary transition-colors">{mov.materialNombre}</p>
+                    <p className="font-bold leading-none truncate group-hover:text-primary transition-colors">{mov.articuloNombre}</p>
                     <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
                       {mov.tipo} • {mov.cantidad} unid.
                     </p>
                   </div>
                   <div className="ml-2 font-bold text-[10px] text-muted-foreground bg-muted/30 px-2 py-1 rounded-md">
-                    {new Date(mov.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                    {mov.fecha ? new Date(mov.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : '---'}
                   </div>
                 </div>
               )) : (

@@ -6,17 +6,14 @@ import {
   Plus, 
   Search, 
   UserRound, 
-  Mail, 
   Shield, 
   MoreHorizontal, 
   CheckCircle2, 
   XCircle, 
   PenLine, 
   ShieldAlert,
-  Phone,
   Trash2,
   Briefcase,
-  UserPlus,
   Check
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -56,12 +53,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useFirestore, useCollection } from '@/firebase'
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
-import { useMemoFirebase } from '@/firebase/use-memo-firebase'
 
 export default function TrabajadoresPage() {
   const db = useFirestore()
@@ -73,7 +69,6 @@ export default function TrabajadoresPage() {
   const [nuevoRol, setNuevoRol] = useState('')
   const [trabajadorSeleccionadoId, setTrabajadorSeleccionadoId] = useState<string | null>(null)
   
-  // Estados para edición de roles
   const [rolEditandoId, setRolEditandoId] = useState<string | null>(null)
   const [nombreRolEdit, setNombreRolEdit] = useState('')
 
@@ -155,19 +150,28 @@ export default function TrabajadoresPage() {
 
     const payload = {
       ...formTrabajador,
-      updatedAt: serverTimestamp(),
-      ...(isEditando ? {} : { fechaRegistro: new Date().toISOString() })
+      updatedAt: serverTimestamp()
     }
 
     if (isEditando && trabajadorSeleccionadoId) {
       updateDoc(doc(db, 'trabajadores', trabajadorSeleccionadoId), payload)
-        .then(() => setOpenDialog(false))
+        .then(() => {
+          setOpenDialog(false)
+          toast({ title: "Perfil actualizado" })
+        })
         .catch(async (err) => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `trabajadores/${trabajadorSeleccionadoId}`, operation: 'update', requestResourceData: payload }))
         })
     } else {
-      addDoc(collection(db, 'trabajadores'), payload)
-        .then(() => setOpenDialog(false))
+      addDoc(collection(db, 'trabajadores'), {
+        ...payload,
+        fechaRegistro: new Date().toISOString(),
+        createdAt: serverTimestamp()
+      })
+        .then(() => {
+          setOpenDialog(false)
+          toast({ title: "Trabajador registrado" })
+        })
         .catch(async (err) => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'trabajadores', operation: 'create', requestResourceData: payload }))
         })
@@ -257,18 +261,16 @@ export default function TrabajadoresPage() {
                       )}
                     </div>
                   ))}
-                  {rolesList.length === 0 && (
-                    <p className="text-center py-8 text-xs font-black uppercase tracking-widest text-muted-foreground opacity-30">No hay roles definidos</p>
-                  )}
                 </div>
               </div>
             </DialogContent>
           </Dialog>
 
+          <Button onClick={abrirDialogNuevo} className="w-full md:w-auto bg-primary hover:bg-primary/90 shadow-lg font-bold h-12 px-8 rounded-2xl">
+            <Plus strokeWidth={2.5} className="mr-2 h-5 w-5" /> Registrar Trabajador
+          </Button>
+
           <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-            <Button onClick={abrirDialogNuevo} className="w-full md:w-auto bg-primary hover:bg-primary/90 shadow-lg font-bold h-12 px-8 rounded-2xl">
-              <Plus strokeWidth={2.5} className="mr-2 h-5 w-5" /> Registrar Trabajador
-            </Button>
             <DialogContent className="sm:max-w-[500px] w-[95vw] rounded-[2rem] border-none shadow-2xl">
               <DialogHeader>
                 <DialogTitle className="text-primary font-bold text-xl">{isEditando ? 'Editar Trabajador' : 'Nuevo Colaborador'}</DialogTitle>
@@ -389,13 +391,6 @@ export default function TrabajadoresPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {!loading && filtrados.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-48 text-center text-muted-foreground font-black opacity-30 uppercase text-[10px] tracking-widest">
-                      <UserRound strokeWidth={1} className="h-16 w-16 mx-auto mb-2" /> No se encontraron resultados
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
           </div>

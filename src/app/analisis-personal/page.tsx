@@ -16,9 +16,8 @@ import {
   ChartTooltipContent 
 } from "@/components/ui/chart"
 import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, Cell, CartesianGrid } from "recharts"
-import { useFirestore, useCollection } from '@/firebase'
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase'
 import { collection } from 'firebase/firestore'
-import { useMemoFirebase } from '@/firebase/use-memo-firebase'
 
 const COLORS = [
   'hsl(var(--primary))', 
@@ -32,10 +31,13 @@ export default function AnalisisPersonalPage() {
   const db = useFirestore()
 
   const trabajadoresRef = useMemoFirebase(() => db ? collection(db, 'trabajadores') : null, [db])
-  const movimientosRef = useMemoFirebase(() => db ? collection(db, 'movimientos') : null, [db])
+  const movimientosRef = useMemoFirebase(() => db ? collection(db, 'movimientosStock') : null, [db])
 
-  const { data: trabajadores = [], loading: loadingTrab } = useCollection(trabajadoresRef)
-  const { data: movimientos = [], loading: loadingMov } = useCollection(movimientosRef)
+  const { data: trabajadoresData, loading: loadingTrab } = useCollection(trabajadoresRef)
+  const { data: movimientosData, loading: loadingMov } = useCollection(movimientosRef)
+
+  const trabajadores = trabajadoresData || []
+  const movimientos = movimientosData || []
 
   const stats = useMemo(() => {
     const statsMap: Record<string, { 
@@ -60,7 +62,7 @@ export default function AnalisisPersonalPage() {
       if (m.trabajadorId && statsMap[m.trabajadorId]) {
         statsMap[m.trabajadorId].totalMovimientos += 1
         statsMap[m.trabajadorId].volumenTotal += Number(m.cantidad || 0)
-        if (m.materialId) statsMap[m.trabajadorId].materiales.add(m.materialId)
+        if (m.articuloId) statsMap[m.trabajadorId].materiales.add(m.articuloId)
       }
     })
 
@@ -203,7 +205,7 @@ export default function AnalisisPersonalPage() {
                   <div key={idx} className="p-6 flex items-center justify-between hover:bg-muted/5 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary font-black text-xs">
-                        {item.nombre.charAt(0)}
+                        {item.nombre ? item.nombre.charAt(0) : '?'}
                       </div>
                       <div className="flex flex-col">
                         <span className="font-bold text-sm text-foreground">{item.nombre}</span>
@@ -222,7 +224,8 @@ export default function AnalisisPersonalPage() {
                     </div>
                   </div>
                 ))}
-                {stats.dataArray.length === 0 && (
+                {(loadingTrab || loadingMov) && <div className="p-12 text-center animate-pulse">Analizando registros...</div>}
+                {!loadingTrab && !loadingMov && stats.dataArray.length === 0 && (
                   <div className="p-12 text-center text-muted-foreground opacity-30 font-black uppercase text-xs tracking-widest">
                     No hay movimientos registrados
                   </div>
