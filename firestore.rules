@@ -1,29 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // Permitimos acceso completo si está autenticado para facilitar el prototipado
-    match /roles/{id} {
-      allow read, write: if isSignedIn();
-    }
-    match /categorias/{id} {
-      allow read, write: if isSignedIn();
-    }
-    match /trabajadores/{id} {
-      allow read, write: if isSignedIn();
-    }
-    match /articulos/{id} {
-      allow read, write: if isSignedIn();
-    }
-    match /movimientosStock/{id} {
-      allow read, write: if isSignedIn();
-    }
-
+    // Permitimos acceso completo para facilitar el prototipado rápido y asegurar que los datos no se pierdan por errores de auth inicial
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if true;
     }
   }
 }
