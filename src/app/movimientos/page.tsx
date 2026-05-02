@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { ArrowUpRight, ArrowDownRight, History, CheckCircle2, CheckCircle } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, History, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from "@/components/ui/label"
@@ -14,7 +14,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/select"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,8 +45,11 @@ export default function MovimientosPage() {
   const articulosRef = useMemoFirebase(() => db ? collection(db, 'articulos') : null, [db])
   const trabajadoresRef = useMemoFirebase(() => db ? collection(db, 'trabajadores') : null, [db])
   
-  const { data: articulos = [] } = useCollection(articulosRef)
-  const { data: trabajadores = [] } = useCollection(trabajadoresRef)
+  const { data: articulosData } = useCollection(articulosRef)
+  const { data: trabajadoresData } = useCollection(trabajadoresRef)
+
+  const articulos = articulosData || []
+  const trabajadores = trabajadoresData || []
 
   const articuloSeleccionado = React.useMemo(() => articulos.find((m: any) => m.id === datos.articuloId), [articulos, datos.articuloId])
   const trabajadorSeleccionado = React.useMemo(() => trabajadores.find((t: any) => t.id === datos.trabajadorId), [trabajadores, datos.trabajadorId])
@@ -104,7 +107,6 @@ export default function MovimientosPage() {
         })
       })
       .catch((err) => {
-        console.error(err);
         setIsProcesando(false);
         toast({ title: "Error al guardar", variant: "destructive" })
       });
