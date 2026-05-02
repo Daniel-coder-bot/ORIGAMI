@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react'
@@ -33,7 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useFirestore, useCollection } from '@/firebase'
-import { collection, query, orderBy } from 'firebase/firestore'
+import { collection, query, orderBy, limit } from 'firebase/firestore'
 import { useMemoFirebase } from '@/firebase/use-memo-firebase'
 
 type OrderByField = 'fecha' | 'cantidad' | 'materialNombre';
@@ -45,14 +46,13 @@ export default function HistorialPage() {
   const [ordenCampo, setOrdenCampo] = useState<OrderByField>('fecha')
   const [ordenDir, setOrdenDir] = useState<OrderDir>('desc')
 
-  // Consulta base a Firestore ordenada por fecha
+  // Optimizamos limitando a los últimos 100 movimientos para velocidad inicial
   const movimientosQuery = useMemoFirebase(() => 
-    db ? query(collection(db, 'movimientos'), orderBy('fecha', 'desc')) : null, 
+    db ? query(collection(db, 'movements'), orderBy('fecha', 'desc'), limit(100)) : null, 
   [db])
 
-  const { data: movimientos = [], loading } = useCollection(movimientosQuery)
+  const { data: movimientos = [], loading } = useCollection(movementsQuery)
 
-  // Filtrado y ordenamiento local para máxima reactividad
   const filtrados = useMemo(() => {
     let result = movimientos.filter((h: any) => 
       h.materialNombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -103,12 +103,12 @@ export default function HistorialPage() {
             <div className="p-2.5 rounded-2xl bg-primary/10">
               <ClipboardList strokeWidth={1.5} className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Historial Maestro</h1>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Historial</h1>
           </div>
-          <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Registro auditor de todas las operaciones de inventario.</p>
+          <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Registro auditor de todas las operaciones.</p>
         </div>
         <Button onClick={exportarReporte} variant="outline" className="w-full md:w-auto h-12 px-8 rounded-2xl border-primary/20 text-primary font-black hover:bg-primary/5 transition-all">
-          <Download strokeWidth={1.5} className="mr-2 h-5 w-5" /> Exportar CSV
+          <Download strokeWidth={1.5} className="mr-2 h-5 w-5" /> Exportar
         </Button>
       </div>
 
@@ -118,7 +118,7 @@ export default function HistorialPage() {
             <div className="flex-1 relative">
               <Search strokeWidth={1.5} className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
-                placeholder="Buscar por artículo, responsable o tipo..." 
+                placeholder="Buscar por artículo o responsable..." 
                 className="pl-12 h-14 rounded-2xl bg-muted/30 border-none focus-visible:ring-primary/20 font-bold"
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
@@ -128,7 +128,7 @@ export default function HistorialPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="h-14 px-6 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-muted/50">
-                    <ArrowUpDown strokeWidth={1.5} className="mr-2 h-4 w-4" /> Ordenar por
+                    <ArrowUpDown strokeWidth={1.5} className="mr-2 h-4 w-4" /> Ordenar
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="rounded-xl border-none shadow-2xl p-2 bg-white">
@@ -137,9 +137,6 @@ export default function HistorialPage() {
                   <DropdownMenuItem onClick={() => toggleOrden('cantidad')} className="text-xs font-bold p-3 rounded-lg cursor-pointer">Cantidad {ordenCampo === 'cantidad' && (ordenDir === 'asc' ? '↑' : '↓')}</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="ghost" className="h-14 px-6 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-muted/50">
-                <Filter strokeWidth={1.5} className="mr-2 h-4 w-4" /> Filtros Avanzados
-              </Button>
             </div>
           </div>
 
@@ -148,17 +145,16 @@ export default function HistorialPage() {
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow className="hover:bg-transparent border-none">
-                    <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] text-muted-foreground py-6 px-8">Marca Temporal</TableHead>
-                    <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Material / SKU</TableHead>
+                    <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] text-muted-foreground py-6 px-8">Fecha</TableHead>
+                    <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Material</TableHead>
                     <TableHead className="font-black text-center text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Operación</TableHead>
-                    <TableHead className="font-black text-center text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Volumen</TableHead>
+                    <TableHead className="font-black text-center text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Cantidad</TableHead>
                     <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Responsable</TableHead>
-                    <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] text-muted-foreground hidden md:table-cell text-right pr-8">Auditoría</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
-                    <TableRow><TableCell colSpan={6} className="h-60 text-center font-black text-muted-foreground animate-pulse tracking-widest uppercase text-xs">Sincronizando registros...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="h-60 text-center font-black text-muted-foreground animate-pulse tracking-widest uppercase text-xs">Sincronizando...</TableCell></TableRow>
                   ) : filtrados.map((mov: any) => (
                     <TableRow key={mov.id} className="hover:bg-primary/5 transition-colors border-muted/20">
                       <TableCell className="px-8 py-6">
@@ -168,19 +164,16 @@ export default function HistorialPage() {
                           </div>
                           <div className="flex flex-col">
                             <span className="font-black text-sm text-primary">
-                              {new Date(mov.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                              {new Date(mov.fecha).toLocaleDateString('es-ES')}
                             </span>
-                            <span className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter">
+                            <span className="text-[10px] text-muted-foreground font-black uppercase">
                               {new Date(mov.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-black text-sm text-foreground">{mov.materialNombre}</span>
-                          <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest mt-0.5">ID: {mov.materialId?.slice(0, 8)}</span>
-                        </div>
+                        <span className="font-black text-sm text-foreground">{mov.materialNombre}</span>
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge className={`font-black uppercase px-4 py-1.5 text-[9px] rounded-full border-none shadow-sm ${mov.tipo === 'entrada' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -191,29 +184,10 @@ export default function HistorialPage() {
                         <span className="font-black text-base text-primary">{mov.cantidad}</span>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <UserRound strokeWidth={1.5} className="h-3 w-3 text-muted-foreground" />
-                          <span className="font-bold text-xs text-foreground bg-muted/30 px-3 py-1.5 rounded-xl">{mov.trabajadorNombre || 'Anónimo'}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right pr-8 hidden md:table-cell">
-                        <div className="flex items-center justify-end gap-2 text-muted-foreground/40 italic">
-                          <FileText strokeWidth={1.5} className="h-4 w-4" />
-                          <span className="text-[10px] font-medium max-w-[120px] truncate">{mov.notas || "Sin notas"}</span>
-                        </div>
+                        <span className="font-bold text-xs text-foreground bg-muted/30 px-3 py-1.5 rounded-xl">{mov.trabajadorNombre}</span>
                       </TableCell>
                     </TableRow>
                   ))}
-                  {!loading && filtrados.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-60 text-center text-muted-foreground font-black">
-                        <div className="flex flex-col items-center gap-4 opacity-20">
-                          <ClipboardList strokeWidth={1} className="h-20 w-20" />
-                          <span className="uppercase tracking-[0.2em] text-xs">No se encontraron movimientos</span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
                 </TableBody>
               </Table>
             </div>

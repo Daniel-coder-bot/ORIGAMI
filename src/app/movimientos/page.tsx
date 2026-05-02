@@ -30,6 +30,7 @@ import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/fi
 import { useToast } from '@/hooks/use-toast'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
+import { useMemoFirebase } from '@/firebase/use-memo-firebase'
 
 export default function MovimientosPage() {
   const db = useFirestore()
@@ -44,14 +45,15 @@ export default function MovimientosPage() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isProcesando, setIsProcesando] = useState(false)
 
-  const materialesRef = db ? collection(db, 'materiales') : null
-  const trabajadoresRef = db ? collection(db, 'trabajadores') : null
+  // Memoizamos las referencias para evitar reconexiones innecesarias
+  const materialesRef = useMemoFirebase(() => db ? collection(db, 'materiales') : null, [db])
+  const trabajadoresRef = useMemoFirebase(() => db ? collection(db, 'trabajadores') : null, [db])
   
   const { data: materiales = [] } = useCollection(materialesRef)
   const { data: trabajadores = [] } = useCollection(trabajadoresRef)
 
-  const materialSeleccionado = materiales.find((m: any) => m.id === datos.articuloId)
-  const trabajadorSeleccionado = trabajadores.find((t: any) => t.id === datos.trabajadorId)
+  const materialSeleccionado = React.useMemo(() => materiales.find((m: any) => m.id === datos.articuloId), [materiales, datos.articuloId])
+  const trabajadorSeleccionado = React.useMemo(() => trabajadores.find((t: any) => t.id === datos.trabajadorId), [trabajadores, datos.trabajadorId])
 
   const manejarValidacion = (e: React.FormEvent) => {
     e.preventDefault()
@@ -98,7 +100,6 @@ export default function MovimientosPage() {
       : (materialSeleccionado.stockActual || 0) - cantidadNum
 
     try {
-      // 1. Registrar movimiento con trazabilidad de responsable
       const movData = {
         materialId: datos.articuloId,
         materialNombre: materialSeleccionado.nombre,
@@ -111,9 +112,8 @@ export default function MovimientosPage() {
         createdAt: serverTimestamp()
       }
 
-      await addDoc(collection(db, 'movimientos'), movData)
+      await addDoc(collection(db, 'movements'), movData)
       
-      // 2. Actualizar stock del material
       await updateDoc(materialDocRef, {
         stockActual: nuevoStock,
         updatedAt: serverTimestamp()
@@ -127,7 +127,7 @@ export default function MovimientosPage() {
       setDatos({ articuloId: '', trabajadorId: '', cantidad: '', notas: '' })
     } catch (err: any) {
       errorEmitter.emit('permission-error', new FirestorePermissionError({ 
-        path: `movimientos`, 
+        path: `movements`, 
         operation: 'write',
         requestResourceData: { nuevoStock }
       }))
@@ -144,7 +144,7 @@ export default function MovimientosPage() {
           <div className="p-2.5 rounded-2xl bg-primary/10">
             <History strokeWidth={1.5} className="h-6 w-6 text-primary" />
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Operaciones de Stock</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Operaciones</h1>
         </div>
         <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Registra entradas y salidas con trazabilidad completa.</p>
       </div>
@@ -159,7 +159,7 @@ export default function MovimientosPage() {
               <ArrowUpRight strokeWidth={2} className="h-8 w-8" />
             </div>
             <div>
-              <h3 className="font-black text-xl text-primary">Entrada de Mercancía</h3>
+              <h3 className="font-black text-xl text-primary">Entrada</h3>
               <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] mt-2">Abastecimiento / Devolución</p>
             </div>
           </CardContent>
@@ -174,7 +174,7 @@ export default function MovimientosPage() {
               <ArrowDownRight strokeWidth={2} className="h-8 w-8" />
             </div>
             <div>
-              <h3 className="font-black text-xl text-accent">Salida de Almacén</h3>
+              <h3 className="font-black text-xl text-accent">Salida</h3>
               <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] mt-2">Despacho / Consumo Interno</p>
             </div>
           </CardContent>
@@ -187,13 +187,13 @@ export default function MovimientosPage() {
              <div className="space-y-1">
                <CardTitle className="text-2xl font-black uppercase tracking-tight text-primary flex items-center gap-3">
                   {tipo === 'entrada' ? <ArrowUpRight className="h-6 w-6" /> : <ArrowDownRight className="h-6 w-6 text-accent" />}
-                  {tipo === 'entrada' ? 'Formulario de Ingreso' : 'Formulario de Egreso'}
+                  {tipo === 'entrada' ? 'Ingreso' : 'Egreso'}
                </CardTitle>
                <CardDescription className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Persistencia en tiempo real</CardDescription>
              </div>
              {tipo === 'salida' && materialSeleccionado && (
                <div className="bg-white/80 backdrop-blur px-4 py-2 rounded-2xl border border-accent/10 shadow-sm">
-                 <span className="text-[9px] font-black uppercase text-muted-foreground block">Stock Disponible</span>
+                 <span className="text-[9px] font-black uppercase text-muted-foreground block">Disponible</span>
                  <span className="text-lg font-black text-accent">{materialSeleccionado.stockActual} {materialSeleccionado.unidad}</span>
                </div>
              )}
@@ -212,7 +212,7 @@ export default function MovimientosPage() {
                     onValueChange={(val) => setDatos({...datos, articuloId: val})}
                   >
                     <SelectTrigger className="h-14 rounded-2xl font-bold border-muted/50 focus:ring-primary/20">
-                      <SelectValue placeholder="Busca un material en el catálogo..." />
+                      <SelectValue placeholder="Busca un material..." />
                     </SelectTrigger>
                     <SelectContent className="rounded-2xl border-none shadow-2xl">
                       {materiales.map((a: any) => (
@@ -264,10 +264,10 @@ export default function MovimientosPage() {
 
               <div className="space-y-3">
                 <Label className="font-black text-[11px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                  <History strokeWidth={1.5} className="h-4 w-4" /> Notas de Seguimiento
+                  <History strokeWidth={1.5} className="h-4 w-4" /> Notas
                 </Label>
                 <Textarea 
-                  placeholder="Justificación o detalles técnicos adicionales..." 
+                  placeholder="Detalles técnicos adicionales..." 
                   className="min-h-[280px] rounded-2xl font-bold p-6 resize-none border-muted/50 focus:ring-primary/20"
                   value={datos.notas}
                   onChange={(e) => setDatos({...datos, notas: e.target.value})}
@@ -277,7 +277,7 @@ export default function MovimientosPage() {
 
             <div className="pt-10 border-t border-primary/5 flex justify-end">
               <Button type="submit" size="lg" className={`w-full md:w-auto px-16 font-black h-16 rounded-[1.5rem] shadow-2xl transition-all hover:-translate-y-1 ${tipo === 'entrada' ? 'bg-primary hover:bg-primary/90' : 'bg-accent hover:bg-accent/90'}`}>
-                <CheckCircle2 strokeWidth={2.5} className="mr-3 h-6 w-6" /> Confirmar Operación
+                <CheckCircle2 strokeWidth={2.5} className="mr-3 h-6 w-6" /> Confirmar
               </Button>
             </div>
           </form>
@@ -292,9 +292,9 @@ export default function MovimientosPage() {
             </div>
             <AlertDialogTitle className="text-center text-2xl font-black text-primary uppercase">Confirmar {tipo}</AlertDialogTitle>
             <AlertDialogDescription className="text-center font-bold text-muted-foreground leading-relaxed mt-4">
-              Estás por registrar una {tipo} de <span className="text-foreground font-black">{datos.cantidad} {materialSeleccionado?.unidad}</span> de <span className="text-foreground font-black">{materialSeleccionado?.nombre}</span> bajo la responsabilidad de <span className="text-foreground font-black">{trabajadorSeleccionado?.nombre}</span>.
+              Estás por registrar una {tipo} de <span className="text-foreground font-black">{datos.cantidad} {materialSeleccionado?.unidad}</span> de <span className="text-foreground font-black">{materialSeleccionado?.nombre}</span>.
               <br/><br/>
-              ¿Deseas proceder con la actualización del inventario?
+              ¿Deseas proceder?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-10 sm:justify-center gap-3">

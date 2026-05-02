@@ -44,6 +44,7 @@ import { useToast } from '@/hooks/use-toast'
 import { generarDescripcionArticuloInventario } from '@/ai/flows/generate-inventory-item-description-flow'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
+import { useMemoFirebase } from '@/firebase/use-memo-firebase'
 
 export default function InventarioPage() {
   const db = useFirestore()
@@ -55,8 +56,9 @@ export default function InventarioPage() {
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [nuevaCategoria, setNuevaCategoria] = useState('')
   
-  const materialesRef = db ? collection(db, 'materiales') : null
-  const categoriasRef = db ? collection(db, 'categorias') : null
+  // Memoizamos las referencias para evitar reconexiones innecesarias
+  const materialesRef = useMemoFirebase(() => db ? collection(db, 'materiales') : null, [db])
+  const categoriasRef = useMemoFirebase(() => db ? collection(db, 'categorias') : null, [db])
   
   const { data: materiales = [], loading } = useCollection(materialesRef)
   const { data: categoriasList = [] } = useCollection(categoriasRef)
@@ -71,11 +73,11 @@ export default function InventarioPage() {
     stockMinimo: 5
   })
 
-  const filtrados = materiales.filter((a: any) => 
+  const filtrados = React.useMemo(() => materiales.filter((a: any) => 
     a.nombre?.toLowerCase().includes(busqueda.toLowerCase()) || 
     a.categoria?.toLowerCase().includes(busqueda.toLowerCase()) ||
     a.codigo?.toLowerCase().includes(busqueda.toLowerCase())
-  )
+  ), [materiales, busqueda])
 
   const manejarCrearCategoria = async () => {
     if (!db || !nuevaCategoria.trim()) return
@@ -184,7 +186,7 @@ export default function InventarioPage() {
             <div className="p-2.5 rounded-2xl bg-primary/10">
               <Box strokeWidth={1.5} className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Gestión de Inventario</h1>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Inventario</h1>
           </div>
           <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Control maestro de existencias y categorías.</p>
         </div>
