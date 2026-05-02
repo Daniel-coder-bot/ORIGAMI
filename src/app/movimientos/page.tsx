@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { ArrowUpRight, ArrowDownRight, History, CheckCircle2 } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, History, CheckCircle2, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from "@/components/ui/label"
@@ -35,6 +35,7 @@ export default function MovimientosPage() {
   const { toast } = useToast()
   const { user } = useAuth()
   const [tipo, setTipo] = useState<'entrada' | 'salida'>('entrada')
+  
   const [datos, setDatos] = useState({
     articuloId: '',
     trabajadorId: '',
@@ -44,7 +45,7 @@ export default function MovimientosPage() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isProcesando, setIsProcesando] = useState(false)
 
-  // Autocompletar si es trabajador
+  // Autocompletar datos del trabajador si hay una sesión activa
   useEffect(() => {
     if (user && user.role === 'Trabajador') {
       setDatos(prev => ({ ...prev, trabajadorId: user.id }))
@@ -66,21 +67,35 @@ export default function MovimientosPage() {
   }, [articulos, datos.articuloId])
 
   const trabajadorSeleccionado = React.useMemo(() => {
-    if (!trabajadores) return null
-    return trabajadores.find((t: any) => t.id === datos.trabajadorId) || null
-  }, [trabajadores, datos.trabajadorId])
+    // Si es trabajador, lo buscamos por el ID del usuario logueado
+    const idABuscar = user?.role === 'Trabajador' ? user.id : datos.trabajadorId
+    if (!trabajadores || !idABuscar) return null
+    return trabajadores.find((t: any) => t.id === idABuscar) || null
+  }, [trabajadores, datos.trabajadorId, user])
 
   const manejarValidacion = (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!datos.articuloId || !datos.trabajadorId || !datos.cantidad) {
-      toast({ title: "Datos incompletos", variant: "destructive" })
+    // Aseguramos que el trabajadorId esté presente, ya sea por el formulario o por la sesión
+    const finalTrabajadorId = user?.role === 'Trabajador' ? user.id : datos.trabajadorId
+
+    if (!datos.articuloId || !finalTrabajadorId || !datos.cantidad) {
+      toast({ 
+        title: "Datos incompletos", 
+        description: "Por favor selecciona un artículo, un responsable y una cantidad válida.",
+        variant: "destructive" 
+      })
       return
     }
 
     const cantidadNum = Number(datos.cantidad)
+    if (cantidadNum <= 0) {
+      toast({ title: "Cantidad inválida", description: "La cantidad debe ser mayor a 0.", variant: "destructive" })
+      return
+    }
+
     if (tipo === 'salida' && (Number(articuloSeleccionado?.stockActual) || 0) < cantidadNum) {
-      toast({ title: "Stock insuficiente", variant: "destructive" })
+      toast({ title: "Stock insuficiente", description: `Solo hay ${articuloSeleccionado?.stockActual} disponibles.`, variant: "destructive" })
       return
     }
 
@@ -88,7 +103,16 @@ export default function MovimientosPage() {
   }
 
   const confirmarMovimiento = async () => {
-    if (!db || !articuloSeleccionado || !trabajadorSeleccionado) return
+    if (!db || !articuloSeleccionado) return
+    
+    // Si no encontramos al trabajador en la lista pero tenemos los datos del usuario logueado, los usamos
+    const tNombre = trabajadorSeleccionado?.nombre || user?.nombre
+    const tId = user?.role === 'Trabajador' ? user.id : datos.trabajadorId
+
+    if (!tId || !tNombre) {
+      toast({ title: "Error de responsable", description: "No se pudo identificar al responsable de la operación.", variant: "destructive" })
+      return
+    }
 
     setIsProcesando(true)
     const cantidadNum = Number(datos.cantidad)
@@ -100,8 +124,8 @@ export default function MovimientosPage() {
     const movData = {
       articuloId: datos.articuloId,
       articuloNombre: articuloSeleccionado.nombre,
-      trabajadorId: datos.trabajadorId,
-      trabajadorNombre: trabajadorSeleccionado.nombre,
+      trabajadorId: tId,
+      trabajadorNombre: tNombre,
       tipo,
       cantidad: cantidadNum,
       fecha: new Date().toISOString(),
@@ -115,19 +139,24 @@ export default function MovimientosPage() {
         stockActual: nuevoStock,
         updatedAt: serverTimestamp()
       });
-      toast({ title: "Movimiento registrado" });
+      
+      toast({ title: "Movimiento registrado", description: "El stock ha sido actualizado correctamente." });
+      
       setDatos({ 
         articuloId: '', 
         trabajadorId: user?.role === 'Trabajador' ? user.id : '', 
         cantidad: '', 
         notas: '' 
       });
+      
       setIsProcesando(false);
       setIsConfirmOpen(false);
-      setTimeout(() => window.location.reload(), 800);
+      
+      // Recarga suave para refrescar estados globales si es necesario
+      setTimeout(() => window.location.reload(), 1000);
     } catch (err) {
       setIsProcesando(false);
-      toast({ title: "Error al guardar", variant: "destructive" });
+      toast({ title: "Error al guardar", description: "Hubo un problema de conexión con el servidor.", variant: "destructive" });
     }
   }
 
@@ -144,7 +173,10 @@ export default function MovimientosPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card className={`cursor-pointer transition-all border-none rounded-[2rem] ${tipo === 'entrada' ? 'ring-2 ring-primary bg-primary/5 shadow-lg scale-[1.02]' : 'bg-white'}`} onClick={() => setTipo('entrada')}>
+        <Card 
+          className={`cursor-pointer transition-all border-none rounded-[2rem] ${tipo === 'entrada' ? 'ring-2 ring-primary bg-primary/5 shadow-lg scale-[1.02]' : 'bg-white hover:bg-muted/5'}`} 
+          onClick={() => setTipo('entrada')}
+        >
           <CardContent className="p-8 text-center space-y-4">
             <div className={`p-5 rounded-2xl mx-auto w-fit ${tipo === 'entrada' ? 'bg-primary text-white' : 'bg-muted/50 text-muted-foreground'}`}>
               <ArrowUpRight className="h-8 w-8" />
@@ -153,7 +185,10 @@ export default function MovimientosPage() {
           </CardContent>
         </Card>
 
-        <Card className={`cursor-pointer transition-all border-none rounded-[2rem] ${tipo === 'salida' ? 'ring-2 ring-accent bg-accent/5 shadow-lg scale-[1.02]' : 'bg-white'}`} onClick={() => setTipo('salida')}>
+        <Card 
+          className={`cursor-pointer transition-all border-none rounded-[2rem] ${tipo === 'salida' ? 'ring-2 ring-accent bg-accent/5 shadow-lg scale-[1.02]' : 'bg-white hover:bg-muted/5'}`} 
+          onClick={() => setTipo('salida')}
+        >
           <CardContent className="p-8 text-center space-y-4">
             <div className={`p-5 rounded-2xl mx-auto w-fit ${tipo === 'salida' ? 'bg-accent text-white' : 'bg-muted/50 text-muted-foreground'}`}>
               <ArrowDownRight className="h-8 w-8" />
@@ -186,27 +221,39 @@ export default function MovimientosPage() {
 
                 <div className="space-y-3">
                   <Label className="font-black text-[11px] uppercase tracking-widest text-muted-foreground">Responsable</Label>
-                  <Select 
-                    value={datos.trabajadorId} 
-                    onValueChange={(val) => setDatos({...datos, trabajadorId: val})}
-                    disabled={user?.role === 'Trabajador'}
-                  >
-                    <SelectTrigger className="h-14 rounded-2xl font-bold">
-                      <SelectValue placeholder="¿Quién realiza la operación?" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl border-none shadow-2xl">
-                      {(trabajadores || []).map((t: any) => (
-                        <SelectItem key={t.id} value={t.id} className="py-4 font-bold">{t.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {user?.role === 'Trabajador' && <p className="text-[10px] font-bold text-accent italic">Tu usuario se ha seleccionado automáticamente.</p>}
+                  {user?.role === 'Trabajador' ? (
+                    <div className="flex items-center gap-3 h-14 w-full rounded-2xl bg-muted/30 px-4 border border-transparent">
+                      <User className="h-5 w-5 text-primary" />
+                      <span className="font-bold text-sm text-foreground">{user.nombre}</span>
+                    </div>
+                  ) : (
+                    <Select 
+                      value={datos.trabajadorId} 
+                      onValueChange={(val) => setDatos({...datos, trabajadorId: val})}
+                    >
+                      <SelectTrigger className="h-14 rounded-2xl font-bold">
+                        <SelectValue placeholder="¿Quién realiza la operación?" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl border-none shadow-2xl">
+                        {(trabajadores || []).map((t: any) => (
+                          <SelectItem key={t.id} value={t.id} className="py-4 font-bold">{t.nombre}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {user?.role === 'Trabajador' && <p className="text-[10px] font-bold text-primary/60 italic px-1">Tu usuario ha sido asignado automáticamente.</p>}
                 </div>
 
                 <div className="space-y-3">
                   <Label className="font-black text-[11px] uppercase tracking-widest text-muted-foreground">Cantidad a Procesar</Label>
                   <div className="relative">
-                    <Input type="number" placeholder="0" className="h-16 text-3xl font-black rounded-2xl pl-8" value={datos.cantidad} onChange={(e) => setDatos({...datos, cantidad: e.target.value})} />
+                    <Input 
+                      type="number" 
+                      placeholder="0" 
+                      className="h-16 text-3xl font-black rounded-2xl pl-8" 
+                      value={datos.cantidad} 
+                      onChange={(e) => setDatos({...datos, cantidad: e.target.value})} 
+                    />
                     {articuloSeleccionado && <span className="absolute right-6 top-1/2 -translate-y-1/2 font-black text-muted-foreground uppercase text-xs">{articuloSeleccionado.unidad}</span>}
                   </div>
                 </div>
@@ -214,7 +261,12 @@ export default function MovimientosPage() {
 
               <div className="space-y-3">
                 <Label className="font-black text-[11px] uppercase tracking-widest text-muted-foreground">Observaciones Técnicas</Label>
-                <Textarea placeholder="Indica el motivo, destino o detalles relevantes..." className="min-h-[220px] rounded-2xl font-bold p-6 resize-none bg-muted/5 border-none" value={datos.notas} onChange={(e) => setDatos({...datos, notas: e.target.value})} />
+                <Textarea 
+                  placeholder="Indica el motivo, destino o detalles relevantes..." 
+                  className="min-h-[220px] rounded-2xl font-bold p-6 resize-none bg-muted/5 border-none focus:bg-white transition-colors" 
+                  value={datos.notas} 
+                  onChange={(e) => setDatos({...datos, notas: e.target.value})} 
+                />
               </div>
             </div>
 
@@ -223,7 +275,11 @@ export default function MovimientosPage() {
                   <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
                   <span className="text-[10px] font-bold uppercase tracking-widest">Sincronización en tiempo real activa</span>
                </div>
-               <Button type="submit" size="lg" className={`w-full md:w-auto px-16 font-black h-16 rounded-[1.5rem] shadow-xl transition-transform active:scale-95 ${tipo === 'entrada' ? 'bg-primary' : 'bg-accent'}`}>
+               <Button 
+                type="submit" 
+                size="lg" 
+                className={`w-full md:w-auto px-16 font-black h-16 rounded-[1.5rem] shadow-xl transition-transform active:scale-95 ${tipo === 'entrada' ? 'bg-primary' : 'bg-accent'}`}
+               >
                 <CheckCircle2 className="mr-3 h-6 w-6" /> Confirmar Operación
               </Button>
             </div>
@@ -238,14 +294,18 @@ export default function MovimientosPage() {
               ¿Confirmar Registro?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-center font-bold text-muted-foreground text-lg leading-relaxed">
-              Vas a registrar una <span className={tipo === 'entrada' ? 'text-primary' : 'text-accent'}>{tipo.toUpperCase()}</span> de <span className="text-foreground">{datos.cantidad}</span> {articuloSeleccionado?.nombre}.
+              Vas a registrar una <span className={tipo === 'entrada' ? 'text-primary' : 'text-accent'}>{tipo.toUpperCase()}</span> de <span className="text-foreground">{datos.cantidad}</span> {articuloSeleccionado?.nombre || 'unidades'}.
               <br/>
               <span className="text-xs font-black uppercase block mt-4 opacity-50 tracking-widest">Esta acción actualizará el stock inmediatamente</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:justify-center gap-4 mt-10">
             <AlertDialogCancel disabled={isProcesando} className="h-14 rounded-2xl font-black uppercase tracking-widest px-8">Revisar</AlertDialogCancel>
-            <AlertDialogAction onClick={(e) => { e.preventDefault(); confirmarMovimiento(); }} disabled={isProcesando} className={`h-14 rounded-2xl font-black uppercase tracking-widest px-10 ${tipo === 'entrada' ? 'bg-primary' : 'bg-accent'}`}>
+            <AlertDialogAction 
+              onClick={(e) => { e.preventDefault(); confirmarMovimiento(); }} 
+              disabled={isProcesando} 
+              className={`h-14 rounded-2xl font-black uppercase tracking-widest px-10 ${tipo === 'entrada' ? 'bg-primary' : 'bg-accent'}`}
+            >
               {isProcesando ? <CustomLoader className="animate-spin h-5 w-5" /> : 'Confirmar'}
             </AlertDialogAction>
           </AlertDialogFooter>
