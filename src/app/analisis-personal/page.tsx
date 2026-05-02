@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react'
@@ -11,7 +12,8 @@ import {
   Target,
   Zap,
   Users,
-  Box
+  Box,
+  ChevronRight
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -26,6 +28,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useCollection } from '@/firebase'
 import { collection } from 'firebase/firestore'
 import { useMemoFirebase } from '@/firebase/use-memo-firebase'
+import { Badge } from '@/components/ui/badge'
 
 const COLORS = [
   'hsl(var(--primary))', 
@@ -48,7 +51,6 @@ export default function AnalisisPersonalPage() {
   const { data: movimientos = [], loading: loadingMov } = useCollection(movimientosRef)
 
   const stats = useMemo(() => {
-    // Mapa de estadísticas por ID de trabajador
     const statsMap: Record<string, { 
       nombre: string, 
       rol: string, 
@@ -57,7 +59,6 @@ export default function AnalisisPersonalPage() {
       materiales: Set<string> 
     }> = {}
 
-    // Inicializar con todos los trabajadores
     trabajadores.forEach((t: any) => {
       statsMap[t.id] = {
         nombre: t.nombre,
@@ -68,7 +69,6 @@ export default function AnalisisPersonalPage() {
       }
     })
 
-    // Procesar movimientos
     movimientos.forEach((m: any) => {
       if (m.trabajadorId && statsMap[m.trabajadorId]) {
         statsMap[m.trabajadorId].totalMovimientos += 1
@@ -116,8 +116,8 @@ export default function AnalisisPersonalPage() {
       })
       setAnalisisIA(resultado)
       toast({
-        title: "Evaluación completada",
-        description: "Insights de desempeño generados por la IA.",
+        title: "Análisis generado",
+        description: "Insights estratégicos listos para revisión.",
       })
     } catch (error) {
       toast({
@@ -140,15 +140,15 @@ export default function AnalisisPersonalPage() {
             </div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Evaluación de Desempeño</h1>
           </div>
-          <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Análisis de carga de trabajo y eficiencia por colaborador.</p>
+          <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Métricas de carga de trabajo y productividad real.</p>
         </div>
         <Button 
           onClick={manejarAnalisisIA} 
           disabled={isCargandoIA || loadingMov}
           className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground font-black shadow-lg h-12 rounded-2xl px-8"
         >
-          {isCargandoIA ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <BrainCircuit strokeWidth={1.5} className="mr-2 h-5 w-5" />}
-          Analizar Productividad con IA
+          {isCargandoIA ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles strokeWidth={1.5} className="mr-2 h-5 w-5" />}
+          Generar Insights con IA
         </Button>
       </div>
 
@@ -156,7 +156,7 @@ export default function AnalisisPersonalPage() {
         <Card className="border-none bg-white shadow-sm overflow-hidden rounded-3xl">
           <CardHeader className="pb-2 px-8 pt-8">
              <div className="flex items-center justify-between">
-                <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Volumen Gestionado</CardTitle>
+                <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Volumen Global</CardTitle>
                 <div className="p-2 rounded-xl bg-primary/5 text-primary">
                     <Box strokeWidth={1.5} className="h-5 w-5" />
                 </div>
@@ -166,7 +166,7 @@ export default function AnalisisPersonalPage() {
             <div className="text-4xl font-black text-primary">
               {loadingMov ? "..." : stats.volumenTotalGlobal}
             </div>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Unidades totales movidas</p>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Unidades totales gestionadas</p>
           </CardContent>
         </Card>
 
@@ -190,7 +190,7 @@ export default function AnalisisPersonalPage() {
         <Card className="border-none bg-white shadow-sm overflow-hidden rounded-3xl">
           <CardHeader className="pb-2 px-8 pt-8">
              <div className="flex items-center justify-between">
-                <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Colaboradores</CardTitle>
+                <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Personal Activo</CardTitle>
                 <div className="p-2 rounded-xl bg-muted/50 text-muted-foreground">
                     <Users strokeWidth={1.5} className="h-5 w-5" />
                 </div>
@@ -200,7 +200,7 @@ export default function AnalisisPersonalPage() {
             <div className="text-4xl font-black text-muted-foreground">
               {loadingTrab ? "..." : trabajadores.length}
             </div>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Personal en sistema</p>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Colaboradores en sistema</p>
           </CardContent>
         </Card>
       </div>
@@ -209,9 +209,9 @@ export default function AnalisisPersonalPage() {
         <Card className="bg-white border-none shadow-sm overflow-hidden rounded-3xl">
           <CardHeader className="p-8">
             <CardTitle className="flex items-center gap-2 text-primary font-black text-lg uppercase tracking-tight">
-              <BarChart3 strokeWidth={1.5} className="h-6 w-6" /> Top 5 Volumen por Usuario
+              <BarChart3 strokeWidth={1.5} className="h-6 w-6" /> Líderes de Volumen
             </CardTitle>
-            <CardDescription className="text-xs md:text-sm font-medium">Líderes de carga y despacho en el almacén.</CardDescription>
+            <CardDescription className="text-xs md:text-sm font-medium">Top 5 colaboradores por unidades gestionadas.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] md:h-[400px] p-4">
             {stats.top5.length > 0 ? (
@@ -241,69 +241,80 @@ export default function AnalisisPersonalPage() {
             ) : (
               <div className="h-full flex flex-col items-center justify-center opacity-20">
                 <BarChart3 strokeWidth={1} className="h-24 w-24 mb-4" />
-                <p className="font-black text-xs uppercase tracking-widest">Esperando movimientos...</p>
+                <p className="font-black text-xs uppercase tracking-widest">Sin datos suficientes</p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {analisisIA ? (
-          <Card className="bg-primary/5 border-none shadow-xl animate-in zoom-in-95 duration-500 overflow-hidden rounded-[2.5rem] ring-1 ring-primary/10">
-            <CardHeader className="p-8 md:p-10">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-3 text-primary font-black text-xl">
-                  <Sparkles strokeWidth={1.5} className="h-7 w-7 text-accent" /> Insights de IA
-                </CardTitle>
-                <div className="bg-accent/20 text-accent-foreground px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
-                  Active Intelligence
+        <div className="space-y-6">
+          {analisisIA && (
+            <Card className="bg-primary/5 border-none shadow-xl animate-in zoom-in-95 duration-500 overflow-hidden rounded-[2.5rem] ring-1 ring-primary/10">
+              <CardHeader className="p-8 pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-3 text-primary font-black text-xl">
+                    <Sparkles strokeWidth={1.5} className="h-7 w-7 text-accent" /> Insights Estratégicos
+                  </CardTitle>
                 </div>
-              </div>
+              </CardHeader>
+              <CardContent className="space-y-6 p-8 pt-0">
+                <div className="text-sm leading-relaxed text-foreground/80 font-medium whitespace-pre-wrap bg-white/60 p-6 rounded-2xl border border-primary/5 shadow-inner">
+                  {analisisIA.analisis}
+                </div>
+                <div className="grid gap-3">
+                  {analisisIA.recomendaciones.slice(0, 2).map((rec, i) => (
+                    <div key={i} className="text-xs bg-white p-4 rounded-xl border border-primary/5 shadow-sm flex items-start gap-3">
+                      <div className="bg-primary text-primary-foreground h-5 w-5 rounded-lg flex items-center justify-center text-[9px] font-black shrink-0">{i+1}</div>
+                      <span className="font-bold text-foreground/70">{rec}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card className="bg-white border-none shadow-sm overflow-hidden rounded-3xl">
+            <CardHeader className="p-8 pb-4">
+              <CardTitle className="flex items-center gap-2 text-primary font-black text-lg uppercase tracking-tight">
+                <Users strokeWidth={1.5} className="h-6 w-6" /> Desglose por Colaborador
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-8 p-8 md:p-10 pt-0">
-              <div className="text-sm leading-relaxed text-foreground/80 font-medium whitespace-pre-wrap bg-white/60 p-8 rounded-3xl border border-primary/5 shadow-inner">
-                {analisisIA.analisis}
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                  <Award strokeWidth={2} className="h-4 w-4" /> Colaboradores Destacados
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {analisisIA.destacados.map((item, i) => (
-                    <div key={i} className="bg-white px-4 py-2 rounded-2xl border border-primary/10 shadow-sm text-xs font-black text-primary uppercase tracking-tighter flex items-center gap-2">
-                       <TrendingUp className="h-3 w-3 text-accent" /> {item}
+            <CardContent className="p-0">
+              <div className="divide-y divide-primary/5">
+                {stats.dataArray.slice(0, 6).map((item, idx) => (
+                  <div key={idx} className="p-6 flex items-center justify-between hover:bg-muted/5 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary font-black text-xs">
+                        {item.nombre.charAt(0)}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-sm text-foreground">{item.nombre}</span>
+                        <span className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter">{item.rol}</span>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-5">
-                <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                  <Target strokeWidth={2} className="h-4 w-4" /> Hoja de Ruta Táctica
-                </h4>
-                <div className="grid gap-4">
-                  {analisisIA.recomendaciones.map((rec, i) => (
-                    <div key={i} className="text-xs bg-white p-5 rounded-2xl border border-primary/5 shadow-sm flex items-start gap-5 transition-all hover:shadow-md hover:-translate-y-1">
-                      <span className="bg-primary text-primary-foreground h-7 w-7 rounded-xl flex items-center justify-center text-[10px] font-black shrink-0 shadow-lg">{i+1}</span>
-                      <span className="font-bold text-foreground/70 leading-relaxed pt-1">{rec}</span>
+                    <div className="flex items-center gap-8">
+                      <div className="text-right">
+                        <span className="block font-black text-sm text-primary">{item.volumenTotal}</span>
+                        <span className="text-[9px] font-black uppercase text-muted-foreground">Unidades</span>
+                      </div>
+                      <div className="text-right min-w-[60px]">
+                        <span className="block font-black text-sm text-accent">{item.totalMovimientos}</span>
+                        <span className="text-[9px] font-black uppercase text-muted-foreground">Ops.</span>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
+                {stats.dataArray.length === 0 && (
+                  <div className="p-12 text-center text-muted-foreground opacity-30 font-black uppercase text-xs tracking-widest">
+                    No hay movimientos registrados
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
-        ) : (
-          <Card className="flex flex-col items-center justify-center p-12 text-center border-none bg-white rounded-3xl shadow-sm">
-            <div className="p-8 rounded-[2rem] bg-muted/20 mb-8">
-                <BrainCircuit strokeWidth={1} className="h-24 w-24 text-muted-foreground opacity-20" />
-            </div>
-            <h3 className="text-2xl font-black text-muted-foreground uppercase tracking-tight">Motor de IA en espera</h3>
-            <p className="text-xs text-muted-foreground/60 max-w-[320px] mt-4 font-black uppercase tracking-widest leading-loose">
-              Procesa el historial de operaciones para detectar líderes de productividad y riesgos de sobrecarga.
-            </p>
-          </Card>
-        )}
+        </div>
       </div>
     </div>
   )
 }
+
