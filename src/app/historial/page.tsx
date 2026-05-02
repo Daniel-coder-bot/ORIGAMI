@@ -1,7 +1,6 @@
-
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { 
   ArrowUpRight, 
   ArrowDownRight, 
@@ -12,7 +11,8 @@ import {
   ClipboardList,
   Clock,
   UserRound,
-  FileText
+  FileText,
+  ArrowUpDown
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,29 +26,74 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useFirestore, useCollection } from '@/firebase'
 import { collection, query, orderBy } from 'firebase/firestore'
 import { useMemoFirebase } from '@/firebase/use-memo-firebase'
 
+type OrderByField = 'fecha' | 'cantidad' | 'materialNombre';
+type OrderDir = 'asc' | 'desc';
+
 export default function HistorialPage() {
   const db = useFirestore()
   const [busqueda, setBusqueda] = useState('')
+  const [ordenCampo, setOrdenCampo] = useState<OrderByField>('fecha')
+  const [ordenDir, setOrdenDir] = useState<OrderDir>('desc')
 
+  // Consulta base a Firestore ordenada por fecha
   const movimientosQuery = useMemoFirebase(() => 
     db ? query(collection(db, 'movimientos'), orderBy('fecha', 'desc')) : null, 
   [db])
 
   const { data: movimientos = [], loading } = useCollection(movimientosQuery)
 
-  const filtrados = movimientos.filter((h: any) => 
-    h.materialNombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-    h.trabajadorNombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-    h.tipo?.toLowerCase().includes(busqueda.toLowerCase())
-  )
+  // Filtrado y ordenamiento local para máxima reactividad
+  const filtrados = useMemo(() => {
+    let result = movimientos.filter((h: any) => 
+      h.materialNombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      h.trabajadorNombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      h.tipo?.toLowerCase().includes(busqueda.toLowerCase())
+    );
+
+    return result.sort((a: any, b: any) => {
+      const valA = a[ordenCampo];
+      const valB = b[ordenCampo];
+      
+      if (ordenDir === 'asc') {
+        return valA > valB ? 1 : -1;
+      } else {
+        return valA < valB ? 1 : -1;
+      }
+    });
+  }, [movimientos, busqueda, ordenCampo, ordenDir]);
+
+  const toggleOrden = (campo: OrderByField) => {
+    if (ordenCampo === campo) {
+      setOrdenDir(ordenDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setOrdenCampo(campo);
+      setOrdenDir('desc');
+    }
+  };
 
   const exportarReporte = () => {
-    alert("Generando reporte CSV con " + filtrados.length + " registros...")
-  }
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + "Fecha,Material,Tipo,Cantidad,Responsable,Notas\n"
+      + filtrados.map(m => `${m.fecha},${m.materialNombre},${m.tipo},${m.cantidad},${m.trabajadorNombre},${m.notas || ''}`).join("\n");
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `reporte_movimientos_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
@@ -63,7 +108,7 @@ export default function HistorialPage() {
           <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Registro auditor de todas las operaciones de inventario.</p>
         </div>
         <Button onClick={exportarReporte} variant="outline" className="w-full md:w-auto h-12 px-8 rounded-2xl border-primary/20 text-primary font-black hover:bg-primary/5 transition-all">
-          <Download strokeWidth={1.5} className="mr-2 h-5 w-5" /> Exportar Datos
+          <Download strokeWidth={1.5} className="mr-2 h-5 w-5" /> Exportar CSV
         </Button>
       </div>
 
@@ -80,11 +125,20 @@ export default function HistorialPage() {
               />
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-14 px-6 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-muted/50">
+                    <ArrowUpDown strokeWidth={1.5} className="mr-2 h-4 w-4" /> Ordenar por
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="rounded-xl border-none shadow-2xl p-2 bg-white">
+                  <DropdownMenuItem onClick={() => toggleOrden('fecha')} className="text-xs font-bold p-3 rounded-lg cursor-pointer">Fecha {ordenCampo === 'fecha' && (ordenDir === 'asc' ? '↑' : '↓')}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => toggleOrden('materialNombre')} className="text-xs font-bold p-3 rounded-lg cursor-pointer">Material {ordenCampo === 'materialNombre' && (ordenDir === 'asc' ? '↑' : '↓')}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => toggleOrden('cantidad')} className="text-xs font-bold p-3 rounded-lg cursor-pointer">Cantidad {ordenCampo === 'cantidad' && (ordenDir === 'asc' ? '↑' : '↓')}</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button variant="ghost" className="h-14 px-6 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-muted/50">
-                <Calendar strokeWidth={1.5} className="mr-2 h-4 w-4" /> Periodo
-              </Button>
-              <Button variant="ghost" className="h-14 px-6 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-muted/50">
-                <Filter strokeWidth={1.5} className="mr-2 h-4 w-4" /> Filtros
+                <Filter strokeWidth={1.5} className="mr-2 h-4 w-4" /> Filtros Avanzados
               </Button>
             </div>
           </div>
