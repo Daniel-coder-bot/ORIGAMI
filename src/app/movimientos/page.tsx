@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react'
@@ -49,7 +48,6 @@ export default function MovimientosPage() {
     const materialSeleccionado = materiales.find((m: any) => m.id === datos.articuloId)
     const cantidadNum = Number(datos.cantidad)
 
-    // Lógica de actualización de stock
     const materialDocRef = doc(db, 'materiales', datos.articuloId)
     const nuevoStock = tipo === 'entrada' 
       ? (materialSeleccionado.stockActual || 0) + cantidadNum
@@ -64,7 +62,6 @@ export default function MovimientosPage() {
       return
     }
 
-    // Registro de movimiento
     addDoc(collection(db, 'movimientos'), {
       materialId: datos.articuloId,
       materialNombre: materialSeleccionado.nombre,
@@ -82,7 +79,6 @@ export default function MovimientosPage() {
       errorEmitter.emit('permission-error', perr)
     })
 
-    // Actualización de stock en el material
     updateDoc(materialDocRef, {
       stockActual: nuevoStock
     }).then(() => {
@@ -110,7 +106,7 @@ export default function MovimientosPage() {
           </div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Movimientos de Stock</h1>
         </div>
-        <p className="text-sm md:text-base text-muted-foreground font-medium pl-12">Actualiza el inventario en Firestore instantáneamente.</p>
+        <p className="text-sm md:text-base text-muted-foreground font-medium pl-12">Actualiza el inventario instantáneamente.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -151,7 +147,7 @@ export default function MovimientosPage() {
               {tipo === 'entrada' ? <ArrowUpRight className="h-5 w-5" /> : <ArrowDownRight className="h-5 w-5" />}
               Registro de {tipo}
            </CardTitle>
-           <CardDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Persistencia inmediata en Firestore</CardDescription>
+           <CardDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Persistencia inmediata</CardDescription>
         </CardHeader>
         <CardContent className="p-6 md:p-10">
           <form onSubmit={manejarSubmit} className="space-y-8">

@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useMemo } from 'react'
@@ -37,7 +36,6 @@ export default function DashboardPage() {
   const db = useFirestore()
   const [barSize, setBarSize] = useState(32)
   
-  // Consultas a Firestore
   const materialesRef = useMemoFirebase(() => db ? collection(db, 'materiales') : null, [db])
   const movimientosRecientesRef = useMemoFirebase(() => 
     db ? query(collection(db, 'movimientos'), orderBy('fecha', 'desc'), limit(5)) : null, 
@@ -55,7 +53,6 @@ export default function DashboardPage() {
     return () => window.removeEventListener('resize', updateBarSize)
   }, [])
 
-  // Indicadores calculados
   const stats = useMemo(() => {
     const totalStock = materiales.reduce((acc, m) => acc + (m.stockActual || 0), 0)
     const stockBajo = materiales.filter(m => (m.stockActual || 0) <= (m.stockMinimo || 5))
@@ -67,7 +64,6 @@ export default function DashboardPage() {
     }
   }, [materiales])
 
-  // Datos para el gráfico (mock para visualización, ya que requiere agregación temporal compleja en Firestore)
   const chartData = [
     { mes: "Ene", stock: 400 },
     { mes: "Feb", stock: 300 },
@@ -192,7 +188,7 @@ export default function DashboardPage() {
             <CardTitle className="text-lg md:text-xl text-primary font-bold flex items-center gap-2">
               <Clock strokeWidth={1.5} className="h-5 w-5" /> Actividad Reciente
             </CardTitle>
-            <CardDescription className="text-xs md:text-sm font-medium">Últimas operaciones en Firestore.</CardDescription>
+            <CardDescription className="text-xs md:text-sm font-medium">Últimas operaciones registradas.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4 md:space-y-6">

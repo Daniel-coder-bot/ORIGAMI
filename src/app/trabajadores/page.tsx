@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react'
@@ -113,7 +112,6 @@ export default function TrabajadoresPage() {
       return
     }
 
-    // Validar duplicados por correo (solo si es nuevo)
     if (!isEditando) {
       const existe = trabajadores.some((t: any) => t.correo.toLowerCase() === formTrabajador.correo.toLowerCase())
       if (existe) {
@@ -191,7 +189,7 @@ export default function TrabajadoresPage() {
             <DialogHeader>
               <DialogTitle className="text-primary font-bold text-xl">{isEditando ? 'Editar Trabajador' : 'Registrar Trabajador'}</DialogTitle>
               <DialogDescription className="font-medium text-xs md:text-sm">
-                Completa la información del perfil para persistir en Firestore.
+                Completa la información del perfil para guardarla en el sistema.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-5 py-4">
@@ -346,7 +344,7 @@ export default function TrabajadoresPage() {
                       <TableCell colSpan={5} className="h-40 text-center text-muted-foreground font-bold text-sm">
                         <div className="flex flex-col items-center gap-2 opacity-30">
                           <UserRound strokeWidth={1} className="h-12 w-12" />
-                          No se hallaron resultados en Firestore.
+                          No se hallaron resultados.
                         </div>
                       </TableCell>
                     </TableRow>

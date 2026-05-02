@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from 'react'
@@ -106,7 +105,7 @@ export default function InventarioPage() {
       setNuevoArticulo({ nombre: '', categoria: '', descripcion: '', unidad: 'unidades', stockActual: 0, stockMinimo: 5 })
       toast({
         title: "Artículo guardado",
-        description: "El nuevo artículo se ha registrado en Firestore.",
+        description: "El nuevo artículo se ha registrado exitosamente.",
       })
     }).catch(async (err) => {
       const perr = new FirestorePermissionError({
@@ -152,7 +151,7 @@ export default function InventarioPage() {
             <DialogHeader>
               <DialogTitle className="text-primary font-bold text-xl">Añadir Nuevo Artículo</DialogTitle>
               <DialogDescription className="font-medium text-xs md:text-sm">
-                Registra un nuevo material en la base de datos de Firestore.
+                Registra un nuevo material en el catálogo del sistema.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-5 py-4">
