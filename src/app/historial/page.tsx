@@ -46,12 +46,11 @@ export default function HistorialPage() {
   const [ordenCampo, setOrdenCampo] = useState<OrderByField>('fecha')
   const [ordenDir, setOrdenDir] = useState<OrderDir>('desc')
 
-  // Optimizamos limitando a los últimos 100 movimientos para velocidad inicial
   const movimientosQuery = useMemoFirebase(() => 
     db ? query(collection(db, 'movements'), orderBy('fecha', 'desc'), limit(100)) : null, 
   [db])
 
-  const { data: movimientos = [], loading } = useCollection(movementsQuery)
+  const { data: movimientos = [], loading } = useCollection(movimientosQuery)
 
   const filtrados = useMemo(() => {
     let result = movimientos.filter((h: any) => 
@@ -188,6 +187,13 @@ export default function HistorialPage() {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {!loading && filtrados.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-60 text-center text-muted-foreground font-black opacity-30 uppercase text-[10px] tracking-widest">
+                        No se encontraron resultados
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
