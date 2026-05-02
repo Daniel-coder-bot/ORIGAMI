@@ -56,7 +56,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase'
-import { collection, doc, serverTimestamp } from 'firebase/firestore'
+import { collection, doc, serverTimestamp, deleteDoc, setDoc, updateDoc } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
 import { updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 
@@ -95,7 +95,7 @@ export default function TrabajadoresPage() {
     )
   }, [trabajadores, busqueda])
 
-  const manejarGuardarTrabajador = () => {
+  const manejarGuardarTrabajador = async () => {
     if (!db) return
     if (!formTrabajador.nombre || !formTrabajador.correo || !formTrabajador.rol) {
       toast({ title: "Faltan datos", variant: "destructive" })
@@ -107,35 +107,39 @@ export default function TrabajadoresPage() {
       updatedAt: serverTimestamp()
     }
 
-    if (isEditando && trabajadorSeleccionadoId) {
-      updateDocumentNonBlocking(doc(db, 'trabajadores', trabajadorSeleccionadoId), payload);
-      if (payload.rol === 'Administrador' || payload.rol === 'Gestor de Proyecto') {
-        setDocumentNonBlocking(doc(db, 'usuarios', trabajadorSeleccionadoId), {
-          email: payload.correo,
-          password: payload.password,
-          nombre: payload.nombre,
-          role: payload.rol
-        }, { merge: true });
-      }
-      toast({ title: "Perfil actualizado" });
-    } else {
-      addDocumentNonBlocking(collection(db, 'trabajadores'), {
-        ...payload,
-        fechaRegistro: new Date().toISOString(),
-        createdAt: serverTimestamp()
-      }).then((docRef) => {
-        if (docRef && (payload.rol === 'Administrador' || payload.rol === 'Gestor de Proyecto')) {
-          setDocumentNonBlocking(doc(db, 'usuarios', docRef.id), {
+    try {
+      if (isEditando && trabajadorSeleccionadoId) {
+        await updateDoc(doc(db, 'trabajadores', trabajadorSeleccionadoId), payload);
+        if (payload.rol === 'Administrador' || payload.rol === 'Gestor de Proyecto') {
+          await setDoc(doc(db, 'usuarios', trabajadorSeleccionadoId), {
             email: payload.correo,
             password: payload.password,
             nombre: payload.nombre,
             role: payload.rol
           }, { merge: true });
         }
-      });
-      toast({ title: "Trabajador registrado" });
+        toast({ title: "Perfil actualizado" });
+      } else {
+        const docRef = await addDoc(collection(db, 'trabajadores'), {
+          ...payload,
+          fechaRegistro: new Date().toISOString(),
+          createdAt: serverTimestamp()
+        });
+        if (payload.rol === 'Administrador' || payload.rol === 'Gestor de Proyecto') {
+          await setDoc(doc(db, 'usuarios', docRef.id), {
+            email: payload.correo,
+            password: payload.password,
+            nombre: payload.nombre,
+            role: payload.rol
+          }, { merge: true });
+        }
+        toast({ title: "Trabajador registrado" });
+      }
+      setOpenDialog(false);
+      setTimeout(() => window.location.reload(), 800);
+    } catch (e) {
+      toast({ title: "Error al guardar", variant: "destructive" });
     }
-    setOpenDialog(false);
   }
 
   const abrirDialogNuevo = () => {
@@ -157,6 +161,17 @@ export default function TrabajadoresPage() {
       password: trabajador.password || ''
     })
     setOpenDialog(true)
+  }
+
+  const eliminarTrabajador = async (id: string) => {
+    if (!db) return
+    try {
+      await deleteDoc(doc(db, 'trabajadores', id));
+      toast({ title: "Trabajador eliminado" });
+      setTimeout(() => window.location.reload(), 800);
+    } catch (e) {
+      toast({ title: "Error al eliminar", variant: "destructive" });
+    }
   }
 
   return (
@@ -201,7 +216,7 @@ export default function TrabajadoresPage() {
                       <SelectItem value="Administrador">Administrador</SelectItem>
                       <SelectItem value="Gestor de Proyecto">Gestor de Proyecto</SelectItem>
                       <SelectItem value="Trabajador">Trabajador</SelectItem>
-                      {roles.map((rol: any) => (
+                      {(roles || []).map((rol: any) => (
                         <SelectItem key={rol.id} value={rol.nombre}>{rol.nombre}</SelectItem>
                       ))}
                     </SelectContent>
@@ -270,7 +285,7 @@ export default function TrabajadoresPage() {
                         <DropdownMenuItem onClick={() => abrirDialogEditar(t)} className="font-bold cursor-pointer">
                           <PenLine className="h-4 w-4 mr-2" /> Editar
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => deleteDocumentNonBlocking(doc(db, 'trabajadores', t.id))} className="text-destructive font-bold cursor-pointer">
+                        <DropdownMenuItem onClick={() => eliminarTrabajador(t.id)} className="text-destructive font-bold cursor-pointer">
                           <Trash2 className="h-4 w-4 mr-2" /> Eliminar
                         </DropdownMenuItem>
                       </DropdownMenuContent>

@@ -60,13 +60,15 @@ export default function MovimientosPage() {
   const articulos = articulosData || []
   const trabajadores = trabajadoresData || []
 
-  const articuloSeleccionado = React.useMemo(() => 
-    articulos.find((m: any) => m.id === datos.articuloId) || null, 
-  [articulos, datos.articuloId])
+  const articuloSeleccionado = React.useMemo(() => {
+    if (!articulos) return null
+    return articulos.find((m: any) => m.id === datos.articuloId) || null
+  }, [articulos, datos.articuloId])
 
-  const trabajadorSeleccionado = React.useMemo(() => 
-    trabajadores.find((t: any) => t.id === datos.trabajadorId) || null, 
-  [trabajadores, datos.trabajadorId])
+  const trabajadorSeleccionado = React.useMemo(() => {
+    if (!trabajadores) return null
+    return trabajadores.find((t: any) => t.id === datos.trabajadorId) || null
+  }, [trabajadores, datos.trabajadorId])
 
   const manejarValidacion = (e: React.FormEvent) => {
     e.preventDefault()
@@ -85,7 +87,7 @@ export default function MovimientosPage() {
     setIsConfirmOpen(true)
   }
 
-  const confirmarMovimiento = () => {
+  const confirmarMovimiento = async () => {
     if (!db || !articuloSeleccionado || !trabajadorSeleccionado) return
 
     setIsProcesando(true)
@@ -107,28 +109,26 @@ export default function MovimientosPage() {
       createdAt: serverTimestamp()
     }
 
-    addDoc(collection(db, 'movimientosStock'), movData)
-      .then(() => {
-        updateDoc(articuloDocRef, {
-          stockActual: nuevoStock,
-          updatedAt: serverTimestamp()
-        })
-        .then(() => {
-          toast({ title: "Movimiento registrado" })
-          setDatos({ 
-            articuloId: '', 
-            trabajadorId: user?.role === 'Trabajador' ? user.id : '', 
-            cantidad: '', 
-            notas: '' 
-          })
-          setIsProcesando(false)
-          setIsConfirmOpen(false)
-        })
-      })
-      .catch((err) => {
-        setIsProcesando(false);
-        toast({ title: "Error al guardar", variant: "destructive" })
+    try {
+      await addDoc(collection(db, 'movimientosStock'), movData);
+      await updateDoc(articuloDocRef, {
+        stockActual: nuevoStock,
+        updatedAt: serverTimestamp()
       });
+      toast({ title: "Movimiento registrado" });
+      setDatos({ 
+        articuloId: '', 
+        trabajadorId: user?.role === 'Trabajador' ? user.id : '', 
+        cantidad: '', 
+        notas: '' 
+      });
+      setIsProcesando(false);
+      setIsConfirmOpen(false);
+      setTimeout(() => window.location.reload(), 800);
+    } catch (err) {
+      setIsProcesando(false);
+      toast({ title: "Error al guardar", variant: "destructive" });
+    }
   }
 
   return (
@@ -175,7 +175,7 @@ export default function MovimientosPage() {
                       <SelectValue placeholder="Selecciona un producto..." />
                     </SelectTrigger>
                     <SelectContent className="rounded-2xl border-none shadow-2xl">
-                      {articulos.map((a: any) => (
+                      {(articulos || []).map((a: any) => (
                         <SelectItem key={a.id} value={a.id} className="py-4 font-bold">
                           {a.nombre} <span className="text-muted-foreground ml-2">({a.stockActual} {a.unidad?.slice(0,3)})</span>
                         </SelectItem>
@@ -195,7 +195,7 @@ export default function MovimientosPage() {
                       <SelectValue placeholder="¿Quién realiza la operación?" />
                     </SelectTrigger>
                     <SelectContent className="rounded-2xl border-none shadow-2xl">
-                      {trabajadores.map((t: any) => (
+                      {(trabajadores || []).map((t: any) => (
                         <SelectItem key={t.id} value={t.id} className="py-4 font-bold">{t.nombre}</SelectItem>
                       ))}
                     </SelectContent>

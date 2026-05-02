@@ -78,6 +78,7 @@ export default function InventarioPage() {
   })
 
   const filtrados = useMemo(() => {
+    if (!articulos) return []
     return articulos.filter((a: any) => 
       a.nombre?.toLowerCase().includes(busqueda.toLowerCase()) || 
       a.categoria?.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -90,6 +91,7 @@ export default function InventarioPage() {
     addDoc(collection(db, 'categorias'), { nombre: nuevaCategoria.trim() }).then(() => {
       setNuevaCategoria('')
       toast({ title: "Categoría creada" })
+      setTimeout(() => window.location.reload(), 500)
     })
   }
 
@@ -104,6 +106,7 @@ export default function InventarioPage() {
       setCatEditandoId(null)
       setNombreCatEdit('')
       toast({ title: "Categoría actualizada" })
+      setTimeout(() => window.location.reload(), 500)
     })
   }
 
@@ -111,6 +114,7 @@ export default function InventarioPage() {
     if (!db) return
     deleteDoc(doc(db, 'categorias', id)).then(() => {
       toast({ title: "Categoría eliminada" })
+      setTimeout(() => window.location.reload(), 500)
     })
   }
 
@@ -156,6 +160,7 @@ export default function InventarioPage() {
           setEditandoId(null)
           resetForm()
           toast({ title: "Artículo actualizado" })
+          setTimeout(() => window.location.reload(), 800)
         })
         .catch(async (err) => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `articulos/${editandoId}`, operation: 'update', requestResourceData: data }))
@@ -168,6 +173,7 @@ export default function InventarioPage() {
         setOpenDialog(false)
         resetForm()
         toast({ title: "Artículo registrado" })
+        setTimeout(() => window.location.reload(), 800)
       }).catch(async (err) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'articulos', operation: 'create', requestResourceData: data }))
       })
@@ -194,9 +200,14 @@ export default function InventarioPage() {
 
   const eliminarArticulo = (id: string) => {
     if (!db) return
-    deleteDoc(doc(db, 'articulos', id)).catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `articulos/${id}`, operation: 'delete' }))
-    })
+    deleteDoc(doc(db, 'articulos', id))
+      .then(() => {
+        toast({ title: "Artículo eliminado" })
+        setTimeout(() => window.location.reload(), 500)
+      })
+      .catch(async (err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `articulos/${id}`, operation: 'delete' }))
+      })
   }
 
   return (
@@ -238,7 +249,7 @@ export default function InventarioPage() {
                 </div>
                 
                 <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
-                  {categoriasList.map((cat: any) => (
+                  {(categoriasList || []).map((cat: any) => (
                     <div key={cat.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-2xl group transition-all hover:bg-muted/50">
                       {catEditandoId === cat.id ? (
                         <div className="flex flex-1 gap-2 animate-in slide-in-from-left-2">
@@ -305,7 +316,7 @@ export default function InventarioPage() {
                         <SelectValue placeholder="Selecciona..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {categoriasList.map((cat: any) => (
+                        {(categoriasList || []).map((cat: any) => (
                           <SelectItem key={cat.id} value={cat.nombre}>{cat.nombre}</SelectItem>
                         ))}
                       </SelectContent>
