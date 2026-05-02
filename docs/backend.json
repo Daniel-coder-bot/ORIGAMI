@@ -1,7 +1,7 @@
+
 {
   "entities": {
     "Rol": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Rol",
       "type": "object",
       "description": "Define los roles que los trabajadores pueden tener dentro del sistema.",
@@ -26,9 +26,22 @@
         "correo": { "type": "string", "format": "email" },
         "rol": { "type": "string" },
         "activo": { "type": "boolean" },
-        "telefono": { "type": "string" }
+        "telefono": { "type": "string" },
+        "password": { "type": "string", "description": "Solo para Administradores y Gestores" }
       },
       "required": ["nombre", "correo", "rol"]
+    },
+    "Usuario": {
+      "title": "Usuario",
+      "type": "object",
+      "description": "Credenciales para acceso administrativo",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "password": { "type": "string" },
+        "nombre": { "type": "string" },
+        "role": { "type": "string", "enum": ["Administrador", "Gestor de Proyecto"] }
+      },
+      "required": ["email", "password", "role"]
     },
     "Articulo": {
       "title": "Articulo",
@@ -65,6 +78,7 @@
       { "path": "/roles/{rolId}", "definition": { "entityName": "Rol", "description": "Roles de usuario" } },
       { "path": "/categorias/{catId}", "definition": { "entityName": "Categoria", "description": "Categorías de productos" } },
       { "path": "/trabajadores/{trabajadorId}", "definition": { "entityName": "Trabajador", "description": "Perfiles de trabajadores" } },
+      { "path": "/usuarios/{userId}", "definition": { "entityName": "Usuario", "description": "Usuarios con acceso administrativo" } },
       { "path": "/articulos/{articuloId}", "definition": { "entityName": "Articulo", "description": "Inventario de artículos" } },
       { "path": "/movimientosStock/{movId}", "definition": { "entityName": "MovimientoStock", "description": "Historial de movimientos" } }
     ]

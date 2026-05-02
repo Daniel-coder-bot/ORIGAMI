@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -10,8 +11,10 @@ import {
   Warehouse,
   History,
   ClipboardList,
-  PieChart
+  PieChart,
+  LogOut
 } from "lucide-react"
+import { useAuth } from "@/context/auth-context"
 
 import {
   Sidebar,
@@ -26,41 +29,56 @@ import {
   SidebarGroupContent,
 } from "@/components/ui/sidebar"
 
-const items = [
-  {
-    title: "Panel de Control",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Trabajadores",
-    url: "/trabajadores",
-    icon: Users,
-  },
-  {
-    title: "Inventario",
-    url: "/inventario",
-    icon: Package,
-  },
-  {
-    title: "Movimientos",
-    url: "/movimientos",
-    icon: History,
-  },
-  {
-    title: "Historial",
-    url: "/historial",
-    icon: ClipboardList,
-  },
-  {
-    title: "Análisis Personal",
-    url: "/analisis-personal",
-    icon: PieChart,
-  },
-]
-
 export function AppSidebar() {
   const pathname = usePathname()
+  const { user, logout } = useAuth()
+
+  const items = React.useMemo(() => {
+    if (!user) return []
+
+    const allItems = [
+      {
+        title: "Panel de Control",
+        url: "/dashboard",
+        icon: LayoutDashboard,
+        roles: ["Administrador", "Gestor de Proyecto"],
+      },
+      {
+        title: "Trabajadores",
+        url: "/trabajadores",
+        icon: Users,
+        roles: ["Administrador"],
+      },
+      {
+        title: "Inventario",
+        url: "/inventario",
+        icon: Package,
+        roles: ["Administrador", "Gestor de Proyecto"],
+      },
+      {
+        title: "Operaciones",
+        url: "/movimientos",
+        icon: History,
+        roles: ["Administrador", "Gestor de Proyecto", "Trabajador"],
+      },
+      {
+        title: "Historial",
+        url: "/historial",
+        icon: ClipboardList,
+        roles: ["Administrador", "Gestor de Proyecto"],
+      },
+      {
+        title: "Análisis Personal",
+        url: "/analisis-personal",
+        icon: PieChart,
+        roles: ["Administrador", "Gestor de Proyecto"],
+      },
+    ]
+
+    return allItems.filter(item => item.roles.includes(user.role))
+  }, [user])
+
+  if (!user) return null
 
   return (
     <Sidebar variant="sidebar" collapsible="icon" className="border-r border-primary/5">
@@ -71,7 +89,7 @@ export function AppSidebar() {
           </div>
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
             <span className="text-lg font-black tracking-tight text-primary">Gestor Stock</span>
-            <span className="text-[10px] text-muted-foreground uppercase font-black tracking-[0.2em]">Enterprise</span>
+            <span className="text-[10px] text-muted-foreground uppercase font-black tracking-[0.2em]">{user.role}</span>
           </div>
         </div>
       </SidebarHeader>
@@ -101,8 +119,26 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t border-primary/5 p-6 text-[9px] text-muted-foreground font-black uppercase tracking-widest group-data-[collapsible=icon]:hidden">
-        <p>© 2024 Gestor Stock</p>
+      <SidebarFooter className="border-t border-primary/5 p-4 flex flex-col gap-4">
+        <div className="group-data-[collapsible=icon]:hidden px-2">
+          <p className="text-[10px] font-black uppercase text-muted-foreground truncate">{user.nombre}</p>
+        </div>
+        <SidebarMenu className="px-2">
+          <SidebarMenuItem>
+            <SidebarMenuButton 
+              onClick={logout}
+              className="h-11 rounded-xl text-destructive hover:bg-destructive/5 hover:text-destructive"
+            >
+              <div className="p-1.5 rounded-lg">
+                <LogOut strokeWidth={1.5} className="h-5 w-5" />
+              </div>
+              <span className="font-bold text-sm">Cerrar Sesión</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <div className="px-2 text-[9px] text-muted-foreground font-black uppercase tracking-widest group-data-[collapsible=icon]:hidden">
+          <p>© 2024 Gestor Stock</p>
+        </div>
       </SidebarFooter>
     </Sidebar>
   )

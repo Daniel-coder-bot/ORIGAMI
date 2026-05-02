@@ -14,7 +14,9 @@ import {
   ShieldAlert,
   Trash2,
   Briefcase,
-  Check
+  Check,
+  Key,
+  Mail
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -54,7 +56,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase'
-import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
@@ -86,7 +88,8 @@ export default function TrabajadoresPage() {
     correo: '',
     rol: '',
     telefono: '',
-    activo: true
+    activo: true,
+    password: ''
   })
 
   const filtrados = useMemo(() => {
@@ -129,7 +132,7 @@ export default function TrabajadoresPage() {
   const abrirDialogNuevo = () => {
     setIsEditando(false)
     setTrabajadorSeleccionadoId(null)
-    setFormTrabajador({ nombre: '', correo: '', rol: '', telefono: '', activo: true })
+    setFormTrabajador({ nombre: '', correo: '', rol: '', telefono: '', activo: true, password: '' })
     setOpenDialog(true)
   }
 
@@ -141,12 +144,13 @@ export default function TrabajadoresPage() {
       correo: trabajador.correo,
       rol: trabajador.rol,
       telefono: trabajador.telefono || '',
-      activo: trabajador.activo
+      activo: trabajador.activo,
+      password: trabajador.password || ''
     })
     setOpenDialog(true)
   }
 
-  const manejarGuardarTrabajador = () => {
+  const manejarGuardarTrabajador = async () => {
     if (!db) return
     if (!formTrabajador.nombre || !formTrabajador.correo || !formTrabajador.rol) {
       toast({ title: "Faltan datos", variant: "destructive" })
@@ -158,36 +162,54 @@ export default function TrabajadoresPage() {
       updatedAt: serverTimestamp()
     }
 
-    if (isEditando && trabajadorSeleccionadoId) {
-      updateDoc(doc(db, 'trabajadores', trabajadorSeleccionadoId), payload)
-        .then(() => {
-          setOpenDialog(false)
-          toast({ title: "Perfil actualizado" })
-        })
-        .catch(async (err) => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `trabajadores/${trabajadorSeleccionadoId}`, operation: 'update', requestResourceData: payload }))
-        })
-    } else {
-      addDoc(collection(db, 'trabajadores'), {
-        ...payload,
-        fechaRegistro: new Date().toISOString(),
-        createdAt: serverTimestamp()
-      })
-        .then(() => {
-          setOpenDialog(false)
-          toast({ title: "Trabajador registrado" })
-        })
-        .catch(async (err) => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'trabajadores', operation: 'create', requestResourceData: payload }))
-        })
+    try {
+      if (isEditando && trabajadorSeleccionadoId) {
+        await updateDoc(doc(db, 'trabajadores', trabajadorSeleccionadoId), payload);
+        
+        // Si el rol es admin o gestor, sincronizar con colección usuarios
+        if (payload.rol === 'Administrador' || payload.rol === 'Gestor de Proyecto') {
+          await setDoc(doc(db, 'usuarios', trabajadorSeleccionadoId), {
+            email: payload.correo,
+            password: payload.password,
+            nombre: payload.nombre,
+            role: payload.rol
+          }, { merge: true });
+        }
+        
+        toast({ title: "Perfil actualizado" });
+      } else {
+        const docRef = await addDoc(collection(db, 'trabajadores'), {
+          ...payload,
+          fechaRegistro: new Date().toISOString(),
+          createdAt: serverTimestamp()
+        });
+
+        if (payload.rol === 'Administrador' || payload.rol === 'Gestor de Proyecto') {
+          await setDoc(doc(db, 'usuarios', docRef.id), {
+            email: payload.correo,
+            password: payload.password,
+            nombre: payload.nombre,
+            role: payload.rol
+          });
+        }
+
+        toast({ title: "Trabajador registrado" });
+      }
+      setOpenDialog(false);
+    } catch (err: any) {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `trabajadores`, operation: 'write', requestResourceData: payload }));
     }
   }
 
-  const eliminarTrabajador = (id: string) => {
+  const eliminarTrabajador = async (id: string) => {
     if (!db) return
-    deleteDoc(doc(db, 'trabajadores', id)).catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `trabajadores/${id}`, operation: 'delete' }))
-    })
+    try {
+      await deleteDoc(doc(db, 'trabajadores', id));
+      await deleteDoc(doc(db, 'usuarios', id));
+      toast({ title: "Trabajador eliminado" });
+    } catch (err: any) {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `trabajadores/${id}`, operation: 'delete' }));
+    }
   }
 
   const toggleEstado = (trabajador: any) => {
@@ -205,7 +227,7 @@ export default function TrabajadoresPage() {
             </div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Gestión de Personal</h1>
           </div>
-          <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Administra roles y perfiles de usuario en tiempo real.</p>
+          <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Administra roles, perfiles y accesos al sistema.</p>
         </div>
         
         <div className="flex flex-wrap gap-2">
@@ -215,10 +237,10 @@ export default function TrabajadoresPage() {
                 <Briefcase strokeWidth={1.5} className="mr-2 h-5 w-5" /> Roles
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[450px] rounded-[2rem] border-none shadow-2xl">
+            <DialogContent className="sm:max-w-[450px] rounded-[2rem] border-none shadow-2xl p-8">
               <DialogHeader>
-                <DialogTitle className="font-bold">Administrar Roles</DialogTitle>
-                <DialogDescription>Gestiona los cargos disponibles para tu personal.</DialogDescription>
+                <DialogTitle className="font-bold text-xl">Catálogo de Roles</DialogTitle>
+                <DialogDescription className="font-medium">Define los cargos operativos de la empresa.</DialogDescription>
               </DialogHeader>
               <div className="py-4 space-y-6">
                 <div className="flex gap-2">
@@ -276,28 +298,31 @@ export default function TrabajadoresPage() {
           </Button>
 
           <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-            <DialogContent className="sm:max-w-[500px] w-[95vw] rounded-[2rem] border-none shadow-2xl">
+            <DialogContent className="sm:max-w-[500px] w-[95vw] rounded-[2rem] border-none shadow-2xl p-10">
               <DialogHeader>
                 <DialogTitle className="text-primary font-bold text-xl">{isEditando ? 'Editar Trabajador' : 'Nuevo Colaborador'}</DialogTitle>
-                <DialogDescription className="font-medium text-xs md:text-sm">Completa el perfil para el control de acceso.</DialogDescription>
+                <DialogDescription className="font-medium text-xs md:text-sm italic">Define el perfil y los accesos correspondientes.</DialogDescription>
               </DialogHeader>
-              <div className="grid gap-5 py-4">
+              <div className="grid gap-6 py-4">
                 <div className="grid gap-2">
-                  <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">NOMBRE COMPLETO</Label>
-                  <Input value={formTrabajador.nombre} onChange={(e) => setFormTrabajador({...formTrabajador, nombre: e.target.value})} className="h-12 rounded-xl" placeholder="Ej: Roberto Sánchez" />
+                  <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-2"><UserRound className="h-3 w-3" /> NOMBRE COMPLETO</Label>
+                  <Input value={formTrabajador.nombre} onChange={(e) => setFormTrabajador({...formTrabajador, nombre: e.target.value})} className="h-12 rounded-xl font-bold" placeholder="Ej: Roberto Sánchez" />
                 </div>
                 <div className="grid gap-2">
-                  <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">CORREO CORPORATIVO</Label>
-                  <Input type="email" disabled={isEditando} value={formTrabajador.correo} onChange={(e) => setFormTrabajador({...formTrabajador, correo: e.target.value})} className="h-12 rounded-xl" placeholder="email@empresa.com" />
+                  <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-2"><Mail className="h-3 w-3" /> CORREO CORPORATIVO</Label>
+                  <Input type="email" value={formTrabajador.correo} onChange={(e) => setFormTrabajador({...formTrabajador, correo: e.target.value})} className="h-12 rounded-xl font-medium" placeholder="email@empresa.com" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">CARGO / ROL</Label>
+                    <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-2"><Briefcase className="h-3 w-3" /> CARGO / ROL</Label>
                     <Select value={formTrabajador.rol} onValueChange={(val) => setFormTrabajador({...formTrabajador, rol: val})}>
-                      <SelectTrigger className="h-12 rounded-xl">
-                        <SelectValue placeholder="Seleccionar rol..." />
+                      <SelectTrigger className="h-12 rounded-xl font-bold">
+                        <SelectValue placeholder="Seleccionar..." />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="rounded-2xl border-none shadow-2xl">
+                        <SelectItem value="Administrador">Administrador</SelectItem>
+                        <SelectItem value="Gestor de Proyecto">Gestor de Proyecto</SelectItem>
+                        <SelectItem value="Trabajador">Trabajador</SelectItem>
                         {rolesList.map((rol: any) => (
                           <SelectItem key={rol.id} value={rol.nombre}>{rol.nombre}</SelectItem>
                         ))}
@@ -309,10 +334,26 @@ export default function TrabajadoresPage() {
                     <Input value={formTrabajador.telefono} onChange={(e) => setFormTrabajador({...formTrabajador, telefono: e.target.value})} className="h-12 rounded-xl" placeholder="+54 11..." />
                   </div>
                 </div>
+
+                {(formTrabajador.rol === 'Administrador' || formTrabajador.rol === 'Gestor de Proyecto') && (
+                  <div className="grid gap-2 p-4 bg-primary/5 rounded-2xl border border-primary/10 animate-in slide-in-from-top-2">
+                    <Label className="font-bold text-[10px] uppercase tracking-widest text-primary flex items-center gap-2">
+                      <Key className="h-3 w-3" /> CONTRASENA DE ACCESO
+                    </Label>
+                    <Input 
+                      type="password" 
+                      value={formTrabajador.password} 
+                      onChange={(e) => setFormTrabajador({...formTrabajador, password: e.target.value})} 
+                      className="h-11 rounded-xl bg-white" 
+                      placeholder="Crea una clave segura"
+                    />
+                    <p className="text-[9px] font-bold text-primary/60 italic">Requerida para inicio de sesión administrativo.</p>
+                  </div>
+                )}
               </div>
-              <DialogFooter className="gap-2">
+              <DialogFooter className="gap-2 mt-4">
                 <Button variant="ghost" onClick={() => setOpenDialog(false)} className="h-12 font-bold rounded-xl">Cancelar</Button>
-                <Button onClick={manejarGuardarTrabajador} className="bg-primary font-bold h-12 px-10 rounded-xl shadow-lg">Guardar Registro</Button>
+                <Button onClick={manejarGuardarTrabajador} className="bg-primary font-bold h-12 px-10 rounded-xl shadow-lg uppercase text-xs tracking-widest">Confirmar Registro</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -354,7 +395,7 @@ export default function TrabajadoresPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="font-black px-3 py-1 text-[10px] rounded-full border-primary/20 text-primary bg-primary/5">
+                      <Badge variant="outline" className={`font-black px-3 py-1 text-[10px] rounded-full border-primary/20 bg-primary/5 ${t.rol === 'Administrador' ? 'text-primary border-primary/30' : 'text-muted-foreground'}`}>
                         <Shield strokeWidth={1.5} className="mr-1.5 h-3 w-3" /> {t.rol}
                       </Badge>
                     </TableCell>
