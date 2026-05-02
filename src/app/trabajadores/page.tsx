@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { 
   Plus, 
   Search, 
@@ -75,8 +75,11 @@ export default function TrabajadoresPage() {
   const trabajadoresRef = useMemoFirebase(() => db ? collection(db, 'trabajadores') : null, [db])
   const rolesRef = useMemoFirebase(() => db ? collection(db, 'roles') : null, [db])
   
-  const { data: trabajadores = [], loading } = useCollection(trabajadoresRef)
-  const { data: rolesList = [] } = useCollection(rolesRef)
+  const { data: trabajadoresData, loading } = useCollection(trabajadoresRef)
+  const { data: rolesData } = useCollection(rolesRef)
+
+  const trabajadores = trabajadoresData || []
+  const rolesList = rolesData || []
 
   const [formTrabajador, setFormTrabajador] = useState({
     nombre: '',
@@ -86,11 +89,13 @@ export default function TrabajadoresPage() {
     activo: true
   })
 
-  const filtrados = trabajadores.filter((t: any) => 
-    t.nombre?.toLowerCase().includes(busqueda.toLowerCase()) || 
-    t.correo?.toLowerCase().includes(busqueda.toLowerCase()) ||
-    t.rol?.toLowerCase().includes(busqueda.toLowerCase())
-  )
+  const filtrados = useMemo(() => {
+    return trabajadores.filter((t: any) => 
+      t.nombre?.toLowerCase().includes(busqueda.toLowerCase()) || 
+      t.correo?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      t.rol?.toLowerCase().includes(busqueda.toLowerCase())
+    )
+  }, [trabajadores, busqueda])
 
   const manejarCrearRol = async () => {
     if (!db || !nuevoRol.trim()) return

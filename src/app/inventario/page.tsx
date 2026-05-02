@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { 
   Plus, 
   Search, 
@@ -61,8 +61,11 @@ export default function InventarioPage() {
   const articulosRef = useMemoFirebase(() => db ? collection(db, 'articulos') : null, [db])
   const categoriasRef = useMemoFirebase(() => db ? collection(db, 'categorias') : null, [db])
   
-  const { data: articulos = [], loading } = useCollection(articulosRef)
-  const { data: categoriasList = [] } = useCollection(categoriasRef)
+  const { data: articulosData, loading } = useCollection(articulosRef)
+  const { data: categoriasData } = useCollection(categoriasRef)
+
+  const articulos = articulosData || []
+  const categoriasList = categoriasData || []
 
   const [formArticulo, setFormArticulo] = useState({
     codigo: '',
@@ -74,11 +77,13 @@ export default function InventarioPage() {
     stockMinimo: 5
   })
 
-  const filtrados = React.useMemo(() => articulos.filter((a: any) => 
-    a.nombre?.toLowerCase().includes(busqueda.toLowerCase()) || 
-    a.categoria?.toLowerCase().includes(busqueda.toLowerCase()) ||
-    a.codigo?.toLowerCase().includes(busqueda.toLowerCase())
-  ), [articulos, busqueda])
+  const filtrados = useMemo(() => {
+    return articulos.filter((a: any) => 
+      a.nombre?.toLowerCase().includes(busqueda.toLowerCase()) || 
+      a.categoria?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      a.codigo?.toLowerCase().includes(busqueda.toLowerCase())
+    )
+  }, [articulos, busqueda])
 
   const manejarCrearCategoria = async () => {
     if (!db || !nuevaCategoria.trim()) return
