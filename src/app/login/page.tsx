@@ -4,13 +4,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, updateDoc, or } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Warehouse, Shield, User, Loader2, Sparkles } from 'lucide-react';
+import { Warehouse, Shield, User, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -21,13 +21,12 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   // Form states
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState(''); // Puede ser correo o nombre
   const [password, setPassword] = useState('');
   const [workerId, setWorkerId] = useState('');
 
   const trabajadoresRef = useMemoFirebase(() => db ? collection(db, 'trabajadores') : null, [db]);
-  const { data: workersData } = useCollection(trabajadoresRef);
-  const workers = workersData || [];
+  const { data: workers = [] } = useCollection(trabajadoresRef);
 
   // Función de recuperación para Mauricio Fabián reyes Jiménez
   useEffect(() => {
@@ -41,9 +40,7 @@ export default function LoginPage() {
           const workerDoc = snapshot.docs[0];
           const workerData = workerDoc.data();
           
-          // Si es un administrador sin contraseña o necesitamos forzar la nueva
           if (workerData.rol === 'Administrador' || workerData.rol === 'Gestor de Proyecto') {
-            // Actualizar en colección usuarios (sistema de auth)
             await setDoc(doc(db, 'usuarios', workerDoc.id), {
               email: workerData.correo,
               password: '1234',
@@ -51,16 +48,13 @@ export default function LoginPage() {
               role: workerData.rol
             }, { merge: true });
 
-            // Actualizar en colección trabajadores (perfil)
             await updateDoc(doc(db, 'trabajadores', workerDoc.id), {
               password: '1234'
             });
-
-            console.log("Acceso restaurado para Mauricio. Password: 1234");
           }
         }
       } catch (e) {
-        console.error("Error al restaurar acceso:", e);
+        // Error silencioso en recuperación
       }
     }
     fixMauricio();
@@ -72,7 +66,13 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const q = query(collection(db, 'usuarios'), where('email', '==', email), where('password', '==', password));
+      // Buscamos por email O por nombre exacto
+      const q = query(
+        collection(db, 'usuarios'), 
+        or(where('email', '==', identifier), where('nombre', '==', identifier)),
+        where('password', '==', password)
+      );
+      
       const snapshot = await getDocs(q);
 
       if (!snapshot.empty) {
@@ -136,18 +136,17 @@ export default function LoginPage() {
             <Card className="border-none shadow-2xl bg-white rounded-[2rem] overflow-hidden mt-4">
               <CardHeader className="p-8 pb-4">
                 <CardTitle className="text-xl font-black text-primary">Acceso Administrativo</CardTitle>
-                <CardDescription className="font-medium">Ingresa tus credenciales corporativas.</CardDescription>
+                <CardDescription className="font-medium">Usa tu correo o nombre completo.</CardDescription>
               </CardHeader>
               <CardContent className="p-8 pt-4">
                 <form onSubmit={handleAdminLogin} className="space-y-6">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Correo Electrónico</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Usuario (Nombre o Correo)</Label>
                     <Input 
-                      type="email" 
-                      placeholder="email@empresa.com" 
+                      placeholder="Nombre o email@empresa.com" 
                       className="h-12 rounded-xl font-bold"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
                       required
                     />
                   </div>
@@ -174,7 +173,7 @@ export default function LoginPage() {
             <Card className="border-none shadow-2xl bg-white rounded-[2rem] overflow-hidden mt-4">
               <CardHeader className="p-8 pb-4">
                 <CardTitle className="text-xl font-black text-primary">Acceso de Operario</CardTitle>
-                <CardDescription className="font-medium">Selecciona tu nombre para registrar movimientos.</CardDescription>
+                <CardDescription className="font-medium">Selecciona tu nombre de la lista.</CardDescription>
               </CardHeader>
               <CardContent className="p-8 pt-4">
                 <div className="space-y-6">
