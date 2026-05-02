@@ -6,10 +6,8 @@ import {
   Plus, 
   Search, 
   Box, 
-  Sparkles, 
   Trash2, 
   PenLine,
-  Loader2,
   AlertCircle,
   Hash,
   Tag,
@@ -41,7 +39,6 @@ import { Badge } from "@/components/ui/badge"
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
-import { generarDescripcionArticuloInventario } from '@/ai/flows/generate-inventory-item-description-flow'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
 
@@ -49,7 +46,6 @@ export default function InventarioPage() {
   const db = useFirestore()
   const { toast } = useToast()
   const [busqueda, setBusqueda] = useState('')
-  const [isCargandoIA, setIsCargandoIA] = useState(false)
   const [openDialog, setOpenDialog] = useState(false)
   const [openCatDialog, setOpenCatDialog] = useState(false)
   const [editandoId, setEditandoId] = useState<string | null>(null)
@@ -116,26 +112,6 @@ export default function InventarioPage() {
       toast({ title: "Categoría eliminada" })
       setTimeout(() => window.location.reload(), 500)
     })
-  }
-
-  const manejarGenerarDescripcion = async () => {
-    if (!formArticulo.nombre) {
-      toast({ title: "Nombre requerido", description: "Ingresa el nombre del artículo.", variant: "destructive" })
-      return
-    }
-
-    setIsCargandoIA(true)
-    try {
-      const resultado = await generarDescripcionArticuloInventario({
-        nombreArticulo: formArticulo.nombre,
-        categoriaArticulo: formArticulo.categoria
-      })
-      setFormArticulo(prev => ({ ...prev, descripcion: resultado.descripcionGenerada }))
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudo generar la descripción.", variant: "destructive" })
-    } finally {
-      setIsCargandoIA(false)
-    }
   }
 
   const manejarGuardarArticulo = () => {
@@ -351,12 +327,7 @@ export default function InventarioPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">DESCRIPCIÓN</Label>
-                    <Button variant="ghost" size="sm" onClick={manejarGenerarDescripcion} disabled={isCargandoIA} className="h-7 text-[10px] text-accent font-black px-3 rounded-full hover:bg-accent/5">
-                      {isCargandoIA ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles strokeWidth={1.5} className="mr-1 h-3 w-3" />} IA ASSIST
-                    </Button>
-                  </div>
+                  <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">DESCRIPCIÓN</Label>
                   <Textarea value={formArticulo.descripcion} onChange={(e) => setFormArticulo({...formArticulo, descripcion: e.target.value})} className="min-h-[100px] rounded-xl resize-none p-4" placeholder="Especificaciones..." />
                 </div>
               </div>
