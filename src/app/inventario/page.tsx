@@ -12,7 +12,8 @@ import {
   Hash,
   Tag,
   Check,
-  XCircle
+  XCircle,
+  Filter
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,6 +47,7 @@ export default function InventarioPage() {
   const db = useFirestore()
   const { toast } = useToast()
   const [busqueda, setBusqueda] = useState('')
+  const [categoriaFiltro, setCategoriaFiltro] = useState('todas')
   const [openDialog, setOpenDialog] = useState(false)
   const [openCatDialog, setOpenCatDialog] = useState(false)
   const [editandoId, setEditandoId] = useState<string | null>(null)
@@ -75,12 +77,16 @@ export default function InventarioPage() {
 
   const filtrados = useMemo(() => {
     if (!articulos) return []
-    return articulos.filter((a: any) => 
-      a.nombre?.toLowerCase().includes(busqueda.toLowerCase()) || 
-      a.categoria?.toLowerCase().includes(busqueda.toLowerCase()) ||
-      a.codigo?.toLowerCase().includes(busqueda.toLowerCase())
-    )
-  }, [articulos, busqueda])
+    return articulos.filter((a: any) => {
+      const matchBusqueda = (
+        a.nombre?.toLowerCase().includes(busqueda.toLowerCase()) || 
+        a.categoria?.toLowerCase().includes(busqueda.toLowerCase()) ||
+        a.codigo?.toLowerCase().includes(busqueda.toLowerCase())
+      )
+      const matchCategoria = categoriaFiltro === 'todas' || a.categoria === categoriaFiltro
+      return matchBusqueda && matchCategoria
+    })
+  }, [articulos, busqueda, categoriaFiltro])
 
   const manejarCrearCategoria = async () => {
     if (!db || !nuevaCategoria.trim()) return
@@ -340,9 +346,27 @@ export default function InventarioPage() {
         </div>
       </div>
 
-      <div className="relative w-full">
-        <Search strokeWidth={1.5} className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Filtrar por nombre, código o categoría..." className="pl-12 h-14 rounded-2xl bg-white border-none shadow-sm font-medium w-full" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search strokeWidth={1.5} className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Filtrar por nombre, código..." className="pl-12 h-14 rounded-2xl bg-white border-none shadow-sm font-medium w-full" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+        </div>
+        <div className="w-full md:w-64">
+          <Select value={categoriaFiltro} onValueChange={setCategoriaFiltro}>
+            <SelectTrigger className="h-14 rounded-2xl bg-white border-none shadow-sm font-bold">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-primary" />
+                <SelectValue placeholder="Todas las categorías" />
+              </div>
+            </SelectTrigger>
+            <SelectContent className="rounded-2xl border-none shadow-2xl">
+              <SelectItem value="todas" className="font-bold">Todas las categorías</SelectItem>
+              {(categoriasList || []).map((cat: any) => (
+                <SelectItem key={cat.id} value={cat.nombre} className="font-bold">{cat.nombre}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

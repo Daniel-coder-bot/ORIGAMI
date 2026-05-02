@@ -9,6 +9,9 @@ import {
   MoreHorizontal, 
   PenLine, 
   Trash2,
+  Briefcase,
+  Check,
+  XCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,9 +34,11 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import {
@@ -49,14 +54,21 @@ import { useToast } from '@/hooks/use-toast'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
 
+const PROTECTED_ROLES = ["Administrador", "Gestor de Proyecto", "Trabajador"]
+
 export default function TrabajadoresPage() {
   const db = useFirestore()
   const { toast } = useToast()
   const [busqueda, setBusqueda] = useState('')
   const [openDialog, setOpenDialog] = useState(false)
+  const [openRoleDialog, setOpenRoleDialog] = useState(false)
   const [isEditando, setIsEditando] = useState(false)
   const [trabajadorSeleccionadoId, setTrabajadorSeleccionadoId] = useState<string | null>(null)
   
+  const [nuevoCargo, setNuevoCargo] = useState('')
+  const [cargoEditandoId, setCargoEditandoId] = useState<string | null>(null)
+  const [nombreCargoEdit, setNombreCargoEdit] = useState('')
+
   const trabajadoresRef = useMemoFirebase(() => db ? collection(db, 'trabajadores') : null, [db])
   const rolesRef = useMemoFirebase(() => db ? collection(db, 'roles') : null, [db])
   
@@ -64,7 +76,7 @@ export default function TrabajadoresPage() {
   const { data: rolesData } = useCollection(rolesRef)
 
   const trabajadores = trabajadoresData || []
-  const roles = rolesData || []
+  const rolesList = rolesData || []
 
   const [formTrabajador, setFormTrabajador] = useState({
     nombre: '',
@@ -83,6 +95,39 @@ export default function TrabajadoresPage() {
       t.rol?.toLowerCase().includes(busqueda.toLowerCase())
     )
   }, [trabajadores, busqueda])
+
+  const manejarCrearCargo = async () => {
+    if (!db || !nuevoCargo.trim()) return
+    addDoc(collection(db, 'roles'), { nombre: nuevoCargo.trim() }).then(() => {
+      setNuevoCargo('')
+      toast({ title: "Cargo creado" })
+      setTimeout(() => window.location.reload(), 500)
+    })
+  }
+
+  const manejarEditarCargo = (rol: any) => {
+    if (PROTECTED_ROLES.includes(rol.nombre)) return
+    setCargoEditandoId(rol.id)
+    setNombreCargoEdit(rol.nombre)
+  }
+
+  const guardarEdicionCargo = () => {
+    if (!db || !cargoEditandoId) return
+    updateDoc(doc(db, 'roles', cargoEditandoId), { nombre: nombreCargoEdit.trim() }).then(() => {
+      setCargoEditandoId(null)
+      setNombreCargoEdit('')
+      toast({ title: "Cargo actualizado" })
+      setTimeout(() => window.location.reload(), 500)
+    })
+  }
+
+  const eliminarCargo = (id: string, nombre: string) => {
+    if (!db || PROTECTED_ROLES.includes(nombre)) return
+    deleteDoc(doc(db, 'roles', id)).then(() => {
+      toast({ title: "Cargo eliminado" })
+      setTimeout(() => window.location.reload(), 500)
+    })
+  }
 
   const manejarGuardarTrabajador = () => {
     if (!db) return
@@ -201,8 +246,78 @@ export default function TrabajadoresPage() {
         </div>
         
         <div className="flex flex-wrap gap-2">
+          <Dialog open={openRoleDialog} onOpenChange={setOpenRoleDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="h-12 px-6 rounded-2xl border-primary/20 text-primary font-bold hover:bg-primary/5">
+                <Briefcase strokeWidth={1.5} className="mr-2 h-5 w-5" /> Gestionar Cargos
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[450px] rounded-[2rem] border-none shadow-2xl">
+              <DialogHeader>
+                <DialogTitle className="font-bold">Cargos del Sistema</DialogTitle>
+                <DialogDescription>Define los roles disponibles para el personal.</DialogDescription>
+              </DialogHeader>
+              <div className="py-4 space-y-6">
+                <div className="flex gap-2">
+                  <Input 
+                    value={nuevoCargo} 
+                    onChange={(e) => setNuevoCargo(e.target.value)} 
+                    placeholder="Nuevo cargo..." 
+                    className="h-12 rounded-xl"
+                  />
+                  <Button onClick={manejarCrearCargo} className="rounded-xl h-12 w-12 bg-primary">
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                </div>
+                
+                <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
+                  {/* Roles fijos */}
+                  {PROTECTED_ROLES.map((role) => (
+                    <div key={role} className="flex items-center justify-between p-3 bg-muted/10 rounded-2xl opacity-60">
+                      <span className="font-bold text-sm pl-2">{role}</span>
+                      <Badge variant="outline" className="text-[9px] uppercase">Sistema</Badge>
+                    </div>
+                  ))}
+                  {/* Roles personalizados */}
+                  {(rolesList || []).map((rol: any) => (
+                    <div key={rol.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-2xl group transition-all hover:bg-muted/50">
+                      {cargoEditandoId === rol.id ? (
+                        <div className="flex flex-1 gap-2 animate-in slide-in-from-left-2">
+                          <Input 
+                            value={nombreCargoEdit} 
+                            onChange={(e) => setNombreCargoEdit(e.target.value)} 
+                            className="h-9 rounded-lg" 
+                            autoFocus
+                          />
+                          <Button size="sm" onClick={guardarEdicionCargo} className="h-9 w-9 bg-green-600 hover:bg-green-700">
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setCargoEditandoId(null)} className="h-9 w-9">
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="font-bold text-sm pl-2">{rol.nombre}</span>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => manejarEditarCargo(rol)}>
+                              <PenLine className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-red-50" onClick={() => eliminarCargo(rol.id, rol.nombre)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Button onClick={abrirDialogNuevo} className="bg-primary font-bold h-12 px-8 rounded-2xl">
-            <Plus strokeWidth={2.5} className="mr-2 h-5 w-5" /> Registrar
+            <Plus strokeWidth={2.5} className="mr-2 h-5 w-5" /> Registrar Persona
           </Button>
 
           <Dialog open={openDialog} onOpenChange={setOpenDialog}>
@@ -226,11 +341,11 @@ export default function TrabajadoresPage() {
                       <SelectValue placeholder="Seleccionar..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Administrador">Administrador</SelectItem>
-                      <SelectItem value="Gestor de Proyecto">Gestor de Proyecto</SelectItem>
-                      <SelectItem value="Trabajador">Trabajador</SelectItem>
-                      {(roles || []).map((rol: any) => (
-                        <SelectItem key={rol.id} value={rol.nombre}>{rol.nombre}</SelectItem>
+                      <SelectItem value="Administrador" className="font-bold">Administrador</SelectItem>
+                      <SelectItem value="Gestor de Proyecto" className="font-bold">Gestor de Proyecto</SelectItem>
+                      <SelectItem value="Trabajador" className="font-bold">Trabajador</SelectItem>
+                      {(rolesList || []).map((rol: any) => (
+                        <SelectItem key={rol.id} value={rol.nombre} className="font-bold">{rol.nombre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -269,7 +384,7 @@ export default function TrabajadoresPage() {
             <TableBody>
               {loading ? (
                 <TableRow><TableCell colSpan={4} className="h-48 text-center animate-pulse">Cargando equipo...</TableCell></TableRow>
-              ) : filtrados.map((t: any) => (
+              ) : filtrados.length > 0 ? filtrados.map((t: any) => (
                 <TableRow key={t.id} className="hover:bg-primary/5 border-muted/20">
                   <TableCell className="py-6 px-10">
                     <div className="flex flex-col">
@@ -305,7 +420,9 @@ export default function TrabajadoresPage() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow><TableCell colSpan={4} className="h-48 text-center text-muted-foreground font-bold uppercase text-xs tracking-widest">No hay personal registrado</TableCell></TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
