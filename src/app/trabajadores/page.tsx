@@ -16,7 +16,8 @@ import {
   Phone,
   Trash2,
   Briefcase,
-  UserPlus
+  UserPlus,
+  Check
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -60,6 +61,7 @@ import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from '
 import { useToast } from '@/hooks/use-toast'
 import { errorEmitter } from '@/firebase/error-emitter'
 import { FirestorePermissionError } from '@/firebase/errors'
+import { useMemoFirebase } from '@/firebase/use-memo-firebase'
 
 export default function TrabajadoresPage() {
   const db = useFirestore()
@@ -70,9 +72,13 @@ export default function TrabajadoresPage() {
   const [isEditando, setIsEditando] = useState(false)
   const [nuevoRol, setNuevoRol] = useState('')
   const [trabajadorSeleccionadoId, setTrabajadorSeleccionadoId] = useState<string | null>(null)
+  
+  // Estados para edición de roles
+  const [rolEditandoId, setRolEditandoId] = useState<string | null>(null)
+  const [nombreRolEdit, setNombreRolEdit] = useState('')
 
-  const trabajadoresRef = db ? collection(db, 'trabajadores') : null
-  const rolesRef = db ? collection(db, 'roles') : null
+  const trabajadoresRef = useMemoFirebase(() => db ? collection(db, 'trabajadores') : null, [db])
+  const rolesRef = useMemoFirebase(() => db ? collection(db, 'roles') : null, [db])
   
   const { data: trabajadores = [], loading } = useCollection(trabajadoresRef)
   const { data: rolesList = [] } = useCollection(rolesRef)
@@ -95,8 +101,28 @@ export default function TrabajadoresPage() {
     if (!db || !nuevoRol.trim()) return
     addDoc(collection(db, 'roles'), { nombre: nuevoRol.trim() }).then(() => {
       setNuevoRol('')
-      setOpenRolDialog(false)
-      toast({ title: "Rol creado", description: "Cargo registrado exitosamente." })
+      toast({ title: "Rol creado" })
+    })
+  }
+
+  const manejarEditarRol = (rol: any) => {
+    setRolEditandoId(rol.id)
+    setNombreRolEdit(rol.nombre)
+  }
+
+  const guardarEdicionRol = () => {
+    if (!db || !rolEditandoId) return
+    updateDoc(doc(db, 'roles', rolEditandoId), { nombre: nombreRolEdit.trim() }).then(() => {
+      setRolEditandoId(null)
+      setNombreRolEdit('')
+      toast({ title: "Rol actualizado" })
+    })
+  }
+
+  const eliminarRol = (id: string) => {
+    if (!db) return
+    deleteDoc(doc(db, 'roles', id)).then(() => {
+      toast({ title: "Rol eliminado" })
     })
   }
 
@@ -177,21 +203,65 @@ export default function TrabajadoresPage() {
           <Dialog open={openRolDialog} onOpenChange={setOpenRolDialog}>
             <DialogTrigger asChild>
               <Button variant="outline" className="h-12 px-6 rounded-2xl border-primary/20 text-primary font-bold hover:bg-primary/5">
-                <Briefcase strokeWidth={1.5} className="mr-2 h-5 w-5" /> Nuevo Rol
+                <Briefcase strokeWidth={1.5} className="mr-2 h-5 w-5" /> Roles
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[400px] rounded-3xl border-none shadow-2xl">
+            <DialogContent className="sm:max-w-[450px] rounded-[2rem] border-none shadow-2xl">
               <DialogHeader>
-                <DialogTitle className="font-bold">Añadir Rol / Cargo</DialogTitle>
-                <DialogDescription>Crea un nuevo cargo jerárquico para asignar a tu personal.</DialogDescription>
+                <DialogTitle className="font-bold">Administrar Roles</DialogTitle>
+                <DialogDescription>Gestiona los cargos disponibles para tu personal.</DialogDescription>
               </DialogHeader>
-              <div className="py-4">
-                <Label className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground mb-2 block">Nombre del Cargo</Label>
-                <Input value={nuevoRol} onChange={(e) => setNuevoRol(e.target.value)} placeholder="Ej: Supervisor de Planta" className="h-12 rounded-xl" />
+              <div className="py-4 space-y-6">
+                <div className="flex gap-2">
+                  <Input 
+                    value={nuevoRol} 
+                    onChange={(e) => setNuevoRol(e.target.value)} 
+                    placeholder="Nuevo cargo..." 
+                    className="h-12 rounded-xl"
+                  />
+                  <Button onClick={manejarCrearRol} className="rounded-xl h-12 w-12 bg-primary">
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                </div>
+                
+                <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
+                  {rolesList.map((rol: any) => (
+                    <div key={rol.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-2xl group transition-all hover:bg-muted/50">
+                      {rolEditandoId === rol.id ? (
+                        <div className="flex flex-1 gap-2 animate-in slide-in-from-left-2">
+                          <Input 
+                            value={nombreRolEdit} 
+                            onChange={(e) => setNombreRolEdit(e.target.value)} 
+                            className="h-9 rounded-lg" 
+                            autoFocus
+                          />
+                          <Button size="sm" onClick={guardarEdicionRol} className="h-9 w-9 bg-green-600 hover:bg-green-700">
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setRolEditandoId(null)} className="h-9 w-9">
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="font-bold text-sm pl-2">{rol.nombre}</span>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => manejarEditarRol(rol)}>
+                              <PenLine className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-red-50" onClick={() => eliminarRol(rol.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                  {rolesList.length === 0 && (
+                    <p className="text-center py-8 text-xs font-black uppercase tracking-widest text-muted-foreground opacity-30">No hay roles definidos</p>
+                  )}
+                </div>
               </div>
-              <DialogFooter>
-                <Button onClick={manejarCrearRol} className="bg-primary font-bold h-12 w-full rounded-xl">Registrar Cargo</Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
 

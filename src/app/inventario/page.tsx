@@ -14,7 +14,9 @@ import {
   Hash,
   X,
   Settings2,
-  Tag
+  Tag,
+  Check,
+  XCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -56,7 +58,10 @@ export default function InventarioPage() {
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [nuevaCategoria, setNuevaCategoria] = useState('')
   
-  // Memoizamos las referencias para evitar reconexiones innecesarias
+  // Estados para edición de categorías
+  const [catEditandoId, setCatEditandoId] = useState<string | null>(null)
+  const [nombreCatEdit, setNombreCatEdit] = useState('')
+
   const materialesRef = useMemoFirebase(() => db ? collection(db, 'materiales') : null, [db])
   const categoriasRef = useMemoFirebase(() => db ? collection(db, 'categorias') : null, [db])
   
@@ -81,15 +86,30 @@ export default function InventarioPage() {
 
   const manejarCrearCategoria = async () => {
     if (!db || !nuevaCategoria.trim()) return
-    
-    addDoc(collection(db, 'categorias'), {
-      nombre: nuevaCategoria.trim()
-    }).then(() => {
+    addDoc(collection(db, 'categorias'), { nombre: nuevaCategoria.trim() }).then(() => {
       setNuevaCategoria('')
-      setOpenCatDialog(false)
-      toast({ title: "Categoría creada", description: "Ahora puedes seleccionarla al registrar materiales." })
-    }).catch(() => {
-      toast({ title: "Error", description: "No se pudo crear la categoría.", variant: "destructive" })
+      toast({ title: "Categoría creada" })
+    })
+  }
+
+  const manejarEditarCategoria = (cat: any) => {
+    setCatEditandoId(cat.id)
+    setNombreCatEdit(cat.nombre)
+  }
+
+  const guardarEdicionCategoria = () => {
+    if (!db || !catEditandoId) return
+    updateDoc(doc(db, 'categorias', catEditandoId), { nombre: nombreCatEdit.trim() }).then(() => {
+      setCatEditandoId(null)
+      setNombreCatEdit('')
+      toast({ title: "Categoría actualizada" })
+    })
+  }
+
+  const eliminarCategoria = (id: string) => {
+    if (!db) return
+    deleteDoc(doc(db, 'categorias', id)).then(() => {
+      toast({ title: "Categoría eliminada" })
     })
   }
 
@@ -195,21 +215,65 @@ export default function InventarioPage() {
           <Dialog open={openCatDialog} onOpenChange={setOpenCatDialog}>
             <DialogTrigger asChild>
               <Button variant="outline" className="h-12 px-6 rounded-2xl border-primary/20 text-primary font-bold hover:bg-primary/5">
-                <Tag strokeWidth={1.5} className="mr-2 h-5 w-5" /> Nueva Categoría
+                <Tag strokeWidth={1.5} className="mr-2 h-5 w-5" /> Categorías
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[400px] rounded-3xl border-none shadow-2xl">
+            <DialogContent className="sm:max-w-[450px] rounded-[2rem] border-none shadow-2xl">
               <DialogHeader>
-                <DialogTitle className="font-bold">Añadir Categoría</DialogTitle>
-                <DialogDescription>Define una nueva clasificación para organizar tus materiales.</DialogDescription>
+                <DialogTitle className="font-bold">Administrar Categorías</DialogTitle>
+                <DialogDescription>Gestiona las clasificaciones de tus materiales.</DialogDescription>
               </DialogHeader>
-              <div className="py-4">
-                <Label className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground mb-2 block">Nombre de Categoría</Label>
-                <Input value={nuevaCategoria} onChange={(e) => setNuevaCategoria(e.target.value)} placeholder="Ej: Material Eléctrico" className="h-12 rounded-xl" />
+              <div className="py-4 space-y-6">
+                <div className="flex gap-2">
+                  <Input 
+                    value={nuevaCategoria} 
+                    onChange={(e) => setNuevaCategoria(e.target.value)} 
+                    placeholder="Nueva categoría..." 
+                    className="h-12 rounded-xl"
+                  />
+                  <Button onClick={manejarCrearCategoria} className="rounded-xl h-12 w-12 bg-primary">
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                </div>
+                
+                <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
+                  {categoriasList.map((cat: any) => (
+                    <div key={cat.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-2xl group transition-all hover:bg-muted/50">
+                      {catEditandoId === cat.id ? (
+                        <div className="flex flex-1 gap-2 animate-in slide-in-from-left-2">
+                          <Input 
+                            value={nombreCatEdit} 
+                            onChange={(e) => setNombreCatEdit(e.target.value)} 
+                            className="h-9 rounded-lg" 
+                            autoFocus
+                          />
+                          <Button size="sm" onClick={guardarEdicionCategoria} className="h-9 w-9 bg-green-600 hover:bg-green-700">
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setCatEditandoId(null)} className="h-9 w-9">
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="font-bold text-sm pl-2">{cat.nombre}</span>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => manejarEditarCategoria(cat)}>
+                              <PenLine className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-red-50" onClick={() => eliminarCategoria(cat.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                  {categoriasList.length === 0 && (
+                    <p className="text-center py-8 text-xs font-black uppercase tracking-widest text-muted-foreground opacity-30">No hay categorías</p>
+                  )}
+                </div>
               </div>
-              <DialogFooter>
-                <Button onClick={manejarCrearCategoria} className="bg-primary font-bold h-12 w-full rounded-xl">Guardar Categoría</Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
 
@@ -250,7 +314,6 @@ export default function InventarioPage() {
                         {categoriasList.map((cat: any) => (
                           <SelectItem key={cat.id} value={cat.nombre}>{cat.nombre}</SelectItem>
                         ))}
-                        {categoriasList.length === 0 && <p className="text-[10px] p-2 text-center text-muted-foreground">Crea una categoría primero.</p>}
                       </SelectContent>
                     </Select>
                   </div>
