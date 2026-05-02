@@ -10,9 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Warehouse, Shield, User, Loader2, AlertCircle } from 'lucide-react';
+import { Warehouse, Shield, User, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/tabs';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -50,22 +50,12 @@ export default function LoginPage() {
           }, { merge: true });
         }
       } catch (e) {
-        // Silencioso para no interrumpir el flujo
+        // Silencioso
       }
     };
     
     repairAccount();
   }, [db]);
-
-  const handleEmergencyAccess = () => {
-    login({
-      id: 'emergency-admin',
-      nombre: 'Administrador de Emergencia',
-      correo: 'emergencia@admin.com',
-      role: 'Administrador',
-    });
-    toast({ title: 'Acceso de Emergencia', description: 'Has entrado al panel de control.' });
-  };
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,16 +171,6 @@ export default function LoginPage() {
                     {loading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Entrar al Panel'}
                   </Button>
                 </form>
-
-                <div className="pt-4 border-t border-muted">
-                  <Button 
-                    variant="outline" 
-                    onClick={handleEmergencyAccess}
-                    className="w-full h-12 rounded-xl border-destructive/20 text-destructive font-bold hover:bg-destructive/5"
-                  >
-                    <AlertCircle className="mr-2 h-4 w-4" /> Acceso de Emergencia
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>
