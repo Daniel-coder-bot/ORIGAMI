@@ -1,20 +1,18 @@
 
 "use client"
 
-import React, { useState, useEffect } from 'react'
-import { ArrowUpRight, ArrowDownRight, History, CheckCircle2, User } from 'lucide-react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { ArrowUpRight, ArrowDownRight, History, CheckCircle2, User, Search, Box } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +27,7 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/context/auth-context'
+import { cn } from '@/lib/utils'
 
 export default function MovimientosPage() {
   const db = useFirestore()
@@ -36,6 +35,9 @@ export default function MovimientosPage() {
   const { user } = useAuth()
   const [tipo, setTipo] = useState<'entrada' | 'salida'>('entrada')
   
+  const [busquedaArticulo, setBusquedaArticulo] = useState('')
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false)
+
   const [datos, setDatos] = useState({
     articuloId: '',
     trabajadorId: '',
@@ -58,16 +60,24 @@ export default function MovimientosPage() {
   const { data: articulosData } = useCollection(articulosRef)
   const { data: trabajadoresData } = useCollection(trabajadoresRef)
 
-  const articulos = articulosData || []
-  const trabajadores = trabajadoresData || []
+  const articulos = useMemo(() => articulosData || [], [articulosData])
+  const trabajadores = useMemo(() => trabajadoresData || [], [trabajadoresData])
 
-  const articuloSeleccionado = React.useMemo(() => {
-    if (!articulos) return null
+  // Filtrado dinámico de artículos
+  const articulosFiltrados = useMemo(() => {
+    if (!busquedaArticulo.trim()) return articulos;
+    const term = busquedaArticulo.toLowerCase();
+    return articulos.filter((a: any) => 
+      a.nombre?.toLowerCase().includes(term) || 
+      a.codigo?.toLowerCase().includes(term)
+    );
+  }, [articulos, busquedaArticulo]);
+
+  const articuloSeleccionado = useMemo(() => {
     return articulos.find((m: any) => m.id === datos.articuloId) || null
   }, [articulos, datos.articuloId])
 
-  const trabajadorSeleccionado = React.useMemo(() => {
-    // Si es trabajador, lo buscamos por el ID del usuario logueado
+  const trabajadorSeleccionado = useMemo(() => {
     const idABuscar = user?.role === 'Trabajador' ? user.id : datos.trabajadorId
     if (!trabajadores || !idABuscar) return null
     return trabajadores.find((t: any) => t.id === idABuscar) || null
@@ -76,7 +86,6 @@ export default function MovimientosPage() {
   const manejarValidacion = (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Aseguramos que el trabajadorId esté presente, ya sea por el formulario o por la sesión
     const finalTrabajadorId = user?.role === 'Trabajador' ? user.id : datos.trabajadorId
 
     if (!datos.articuloId || !finalTrabajadorId || !datos.cantidad) {
@@ -105,7 +114,6 @@ export default function MovimientosPage() {
   const confirmarMovimiento = async () => {
     if (!db || !articuloSeleccionado) return
     
-    // Si no encontramos al trabajador en la lista pero tenemos los datos del usuario logueado, los usamos
     const tNombre = trabajadorSeleccionado?.nombre || user?.nombre
     const tId = user?.role === 'Trabajador' ? user.id : datos.trabajadorId
 
@@ -152,7 +160,6 @@ export default function MovimientosPage() {
       setIsProcesando(false);
       setIsConfirmOpen(false);
       
-      // Recarga suave para refrescar estados globales si es necesario
       setTimeout(() => window.location.reload(), 1000);
     } catch (err) {
       setIsProcesando(false);
@@ -203,20 +210,69 @@ export default function MovimientosPage() {
           <form onSubmit={manejarValidacion} className="space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div className="space-y-8">
+                {/* Selector Dinámico de Artículo */}
                 <div className="space-y-3">
                   <Label className="font-black text-[11px] uppercase tracking-widest text-muted-foreground">Material / Artículo</Label>
-                  <Select value={datos.articuloId} onValueChange={(val) => setDatos({...datos, articuloId: val})}>
-                    <SelectTrigger className="h-14 rounded-2xl font-bold">
-                      <SelectValue placeholder="Selecciona un producto..." />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl border-none shadow-2xl">
-                      {(articulos || []).map((a: any) => (
-                        <SelectItem key={a.id} value={a.id} className="py-4 font-bold">
-                          {a.nombre} <span className="text-muted-foreground ml-2">({a.stockActual} {a.unidad?.slice(0,3)})</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                          "w-full h-14 justify-between rounded-2xl font-bold px-4",
+                          !datos.articuloId && "text-muted-foreground"
+                        )}
+                      >
+                        {articuloSeleccionado 
+                          ? `${articuloSeleccionado.nombre} (${articuloSeleccionado.stockActual} ${articuloSeleccionado.unidad?.slice(0,3)})`
+                          : "Buscar producto..."}
+                        <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-2xl overflow-hidden border-none shadow-2xl">
+                      <div className="flex items-center border-b px-3 bg-muted/20">
+                        <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                        <Input
+                          placeholder="Escribe el nombre o código..."
+                          className="h-12 border-none bg-transparent focus-visible:ring-0 font-bold"
+                          value={busquedaArticulo}
+                          onChange={(e) => setBusquedaArticulo(e.target.value)}
+                        />
+                      </div>
+                      <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                        {articulosFiltrados.length === 0 ? (
+                          <div className="py-6 text-center text-xs font-black text-muted-foreground uppercase tracking-widest">
+                            No se encontraron artículos
+                          </div>
+                        ) : (
+                          articulosFiltrados.map((a: any) => (
+                            <div
+                              key={a.id}
+                              className={cn(
+                                "flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors",
+                                datos.articuloId === a.id ? "bg-primary text-white" : "hover:bg-primary/10"
+                              )}
+                              onClick={() => {
+                                setDatos({ ...datos, articuloId: a.id });
+                                setIsPopoverOpen(false);
+                                setBusquedaArticulo('');
+                              }}
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-bold text-sm">{a.nombre}</span>
+                                <span className={cn("text-[10px] font-black uppercase tracking-tighter", datos.articuloId === a.id ? "text-white/80" : "text-muted-foreground")}>
+                                  {a.codigo}
+                                </span>
+                              </div>
+                              <span className="font-black text-xs">
+                                {a.stockActual} {a.unidad?.slice(0,3)}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="space-y-3">
@@ -227,19 +283,25 @@ export default function MovimientosPage() {
                       <span className="font-bold text-sm text-foreground">{user.nombre}</span>
                     </div>
                   ) : (
-                    <Select 
-                      value={datos.trabajadorId} 
-                      onValueChange={(val) => setDatos({...datos, trabajadorId: val})}
-                    >
-                      <SelectTrigger className="h-14 rounded-2xl font-bold">
-                        <SelectValue placeholder="¿Quién realiza la operación?" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-2xl border-none shadow-2xl">
+                    <div className="relative">
+                      <Input 
+                        placeholder="ID o Nombre del responsable..." 
+                        className="h-14 rounded-2xl font-bold"
+                        value={trabajadorSeleccionado?.nombre || ""}
+                        readOnly
+                        onClick={() => {/* Podría añadirse búsqueda dinámica también aquí */}}
+                      />
+                      <select 
+                        className="absolute inset-0 opacity-0 cursor-pointer h-full w-full"
+                        value={datos.trabajadorId} 
+                        onChange={(e) => setDatos({...datos, trabajadorId: e.target.value})}
+                      >
+                        <option value="">Seleccionar responsable...</option>
                         {(trabajadores || []).map((t: any) => (
-                          <SelectItem key={t.id} value={t.id} className="py-4 font-bold">{t.nombre}</SelectItem>
+                          <option key={t.id} value={t.id}>{t.nombre}</option>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </select>
+                    </div>
                   )}
                   {user?.role === 'Trabajador' && <p className="text-[10px] font-bold text-primary/60 italic px-1">Tu usuario ha sido asignado automáticamente.</p>}
                 </div>
