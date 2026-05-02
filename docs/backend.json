@@ -6,6 +6,7 @@
       "description": "Representa un artículo o material en el inventario.",
       "type": "object",
       "properties": {
+        "codigo": { "type": "string", "description": "Código único de identificación del material." },
         "nombre": { "type": "string" },
         "descripcion": { "type": "string" },
         "unidad": { "type": "string" },
@@ -13,7 +14,7 @@
         "stockActual": { "type": "number" },
         "stockMinimo": { "type": "number" }
       },
-      "required": ["nombre", "unidad", "stockActual"]
+      "required": ["codigo", "nombre", "unidad", "stockActual"]
     },
     "Movimiento": {
       "title": "Movimiento",
