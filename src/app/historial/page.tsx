@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Badge } from "@/badge"
+import { Badge } from "@/components/ui/badge"
 import { useFirestore, useCollection } from '@/firebase'
 import { collection, query, orderBy } from 'firebase/firestore'
 import { useMemoFirebase } from '@/firebase/use-memo-firebase'
