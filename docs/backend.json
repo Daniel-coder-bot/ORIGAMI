@@ -1,0 +1,63 @@
+
+{
+  "entities": {
+    "Material": {
+      "title": "Material",
+      "description": "Representa un artículo o material en el inventario.",
+      "type": "object",
+      "properties": {
+        "nombre": { "type": "string" },
+        "descripcion": { "type": "string" },
+        "unidad": { "type": "string" },
+        "categoria": { "type": "string" },
+        "stockActual": { "type": "number" },
+        "stockMinimo": { "type": "number" }
+      },
+      "required": ["nombre", "unidad", "stockActual"]
+    },
+    "Movimiento": {
+      "title": "Movimiento",
+      "description": "Registro de entrada o salida de un material.",
+      "type": "object",
+      "properties": {
+        "materialId": { "type": "string" },
+        "materialNombre": { "type": "string" },
+        "trabajadorId": { "type": "string" },
+        "trabajadorNombre": { "type": "string" },
+        "tipo": { "type": "string", "enum": ["entrada", "salida"] },
+        "cantidad": { "type": "number" },
+        "fecha": { "type": "string", "format": "date-time" },
+        "notas": { "type": "string" }
+      },
+      "required": ["materialId", "tipo", "cantidad", "fecha"]
+    },
+    "Alerta": {
+      "title": "Alerta",
+      "description": "Notificaciones de stock bajo u otros eventos.",
+      "type": "object",
+      "properties": {
+        "materialId": { "type": "string" },
+        "mensaje": { "type": "string" },
+        "fecha": { "type": "string", "format": "date-time" },
+        "activa": { "type": "boolean" }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["google.com"]
+  },
+  "firestore": {
+    "/materiales/{materialId}": {
+      "schema": "#/backend/entities/Material",
+      "description": "Colección de materiales de inventario."
+    },
+    "/movimientos/{movimientoId}": {
+      "schema": "#/backend/entities/Movimiento",
+      "description": "Registro histórico de movimientos."
+    },
+    "/alertas/{alertaId}": {
+      "schema": "#/backend/entities/Alerta",
+      "description": "Alertas del sistema."
+    }
+  }
+}
