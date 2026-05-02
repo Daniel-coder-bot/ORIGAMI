@@ -45,7 +45,6 @@ export default function MovimientosPage() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isProcesando, setIsProcesando] = useState(false)
 
-  // Memoizamos las referencias para evitar reconexiones innecesarias
   const materialesRef = useMemoFirebase(() => db ? collection(db, 'materiales') : null, [db])
   const trabajadoresRef = useMemoFirebase(() => db ? collection(db, 'trabajadores') : null, [db])
   
@@ -89,7 +88,7 @@ export default function MovimientosPage() {
     setIsConfirmOpen(true)
   }
 
-  const confirmarMovimiento = async () => {
+  const confirmarMovimiento = () => {
     if (!db || !materialSeleccionado || !trabajadorSeleccionado) return
 
     setIsProcesando(true)
@@ -99,42 +98,52 @@ export default function MovimientosPage() {
       ? (materialSeleccionado.stockActual || 0) + cantidadNum
       : (materialSeleccionado.stockActual || 0) - cantidadNum
 
-    try {
-      const movData = {
-        materialId: datos.articuloId,
-        materialNombre: materialSeleccionado.nombre,
-        trabajadorId: datos.trabajadorId,
-        trabajadorNombre: trabajadorSeleccionado.nombre,
-        tipo,
-        cantidad: cantidadNum,
-        fecha: new Date().toISOString(),
-        notas: datos.notas,
-        createdAt: serverTimestamp()
-      }
-
-      await addDoc(collection(db, 'movements'), movData)
-      
-      await updateDoc(materialDocRef, {
-        stockActual: nuevoStock,
-        updatedAt: serverTimestamp()
-      })
-
-      toast({
-        title: "Movimiento exitoso",
-        description: `Se ha registrado la ${tipo} de ${cantidadNum} ${materialSeleccionado.unidad}.`,
-      })
-      
-      setDatos({ articuloId: '', trabajadorId: '', cantidad: '', notas: '' })
-    } catch (err: any) {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({ 
-        path: `movements`, 
-        operation: 'write',
-        requestResourceData: { nuevoStock }
-      }))
-    } finally {
-      setIsProcesando(false)
-      setIsConfirmOpen(false)
+    const movData = {
+      materialId: datos.articuloId,
+      materialNombre: materialSeleccionado.nombre,
+      trabajadorId: datos.trabajadorId,
+      trabajadorNombre: trabajadorSeleccionado.nombre,
+      tipo,
+      cantidad: cantidadNum,
+      fecha: new Date().toISOString(),
+      notas: datos.notas,
+      createdAt: serverTimestamp()
     }
+
+    // Registro del movimiento
+    addDoc(collection(db, 'movimientos'), movData)
+      .then(() => {
+        // Actualización de stock tras éxito en registro
+        updateDoc(materialDocRef, {
+          stockActual: nuevoStock,
+          updatedAt: serverTimestamp()
+        })
+        .then(() => {
+          toast({
+            title: "Movimiento exitoso",
+            description: `Se ha registrado la ${tipo} de ${cantidadNum} ${materialSeleccionado.unidad}.`,
+          })
+          setDatos({ articuloId: '', trabajadorId: '', cantidad: '', notas: '' })
+          setIsProcesando(false)
+          setIsConfirmOpen(false)
+        })
+        .catch(async (err) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({ 
+            path: materialDocRef.path, 
+            operation: 'update',
+            requestResourceData: { stockActual: nuevoStock }
+          }))
+          setIsProcesando(false)
+        })
+      })
+      .catch(async (err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ 
+          path: 'movimientos', 
+          operation: 'create',
+          requestResourceData: movData
+        }))
+        setIsProcesando(false)
+      })
   }
 
   return (

@@ -46,8 +46,9 @@ export default function HistorialPage() {
   const [ordenCampo, setOrdenCampo] = useState<OrderByField>('fecha')
   const [ordenDir, setOrdenDir] = useState<OrderDir>('desc')
 
+  // Unificado a 'movimientos' para consistencia con Dashboard y Backend JSON
   const movimientosQuery = useMemoFirebase(() => 
-    db ? query(collection(db, 'movements'), orderBy('fecha', 'desc'), limit(100)) : null, 
+    db ? query(collection(db, 'movimientos'), orderBy('fecha', 'desc'), limit(100)) : null, 
   [db])
 
   const { data: movimientos = [], loading } = useCollection(movimientosQuery)
