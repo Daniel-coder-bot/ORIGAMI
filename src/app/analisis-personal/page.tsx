@@ -1,16 +1,17 @@
-
 "use client"
 
 import React, { useState, useMemo } from 'react'
 import { 
-  UserRound, 
-  ShieldCheck, 
-  UserX, 
+  BarChart3, 
+  TrendingUp, 
+  Award, 
   Sparkles, 
   Loader2, 
-  PieChart as PieChartIcon,
   BrainCircuit,
-  Target
+  Target,
+  Zap,
+  Users,
+  Box
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -19,11 +20,12 @@ import {
   ChartTooltip, 
   ChartTooltipContent 
 } from "@/components/ui/chart"
-import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts"
+import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, Cell, CartesianGrid } from "recharts"
 import { analizarPersonal, type AnalizarPersonalOutput } from '@/ai/flows/analizar-personal-flow'
 import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useCollection } from '@/firebase'
 import { collection } from 'firebase/firestore'
+import { useMemoFirebase } from '@/firebase/use-memo-firebase'
 
 const COLORS = [
   'hsl(var(--primary))', 
@@ -39,31 +41,63 @@ export default function AnalisisPersonalPage() {
   const [isCargandoIA, setIsCargandoIA] = useState(false)
   const [analisisIA, setAnalisisIA] = useState<AnalizarPersonalOutput | null>(null)
 
-  const trabajadoresRef = db ? collection(db, 'trabajadores') : null
-  const { data: trabajadores = [], loading: loadingData } = useCollection(trabajadoresRef)
+  const trabajadoresRef = useMemoFirebase(() => db ? collection(db, 'trabajadores') : null, [db])
+  const movimientosRef = useMemoFirebase(() => db ? collection(db, 'movimientos') : null, [db])
+
+  const { data: trabajadores = [], loading: loadingTrab } = useCollection(trabajadoresRef)
+  const { data: movimientos = [], loading: loadingMov } = useCollection(movimientosRef)
 
   const stats = useMemo(() => {
-    const activos = trabajadores.filter((t: any) => t.activo).length
-    const inactivos = trabajadores.length - activos
-    const roles = trabajadores.reduce((acc: any, t: any) => {
-      const rol = t.rol || 'Sin Rol'
-      acc[rol] = (acc[rol] || 0) + 1
-      return acc
-    }, {})
+    // Mapa de estadísticas por ID de trabajador
+    const statsMap: Record<string, { 
+      nombre: string, 
+      rol: string, 
+      totalMovimientos: number, 
+      volumenTotal: number, 
+      materiales: Set<string> 
+    }> = {}
 
-    const chartData = Object.keys(roles).map(rol => ({
-      name: rol.charAt(0).toUpperCase() + rol.slice(1),
-      value: roles[rol]
-    }))
+    // Inicializar con todos los trabajadores
+    trabajadores.forEach((t: any) => {
+      statsMap[t.id] = {
+        nombre: t.nombre,
+        rol: t.rol,
+        totalMovimientos: 0,
+        volumenTotal: 0,
+        materiales: new Set()
+      }
+    })
 
-    return { activos, inactivos, chartData }
-  }, [trabajadores])
+    // Procesar movimientos
+    movimientos.forEach((m: any) => {
+      if (m.trabajadorId && statsMap[m.trabajadorId]) {
+        statsMap[m.trabajadorId].totalMovimientos += 1
+        statsMap[m.trabajadorId].volumenTotal += Number(m.cantidad || 0)
+        if (m.materialId) statsMap[m.trabajadorId].materiales.add(m.materialId)
+      }
+    })
+
+    const dataArray = Object.values(statsMap).map(s => ({
+      ...s,
+      materialesDistintos: s.materiales.size
+    })).sort((a, b) => b.volumenTotal - a.volumenTotal)
+
+    const top5 = dataArray.slice(0, 5)
+    const volumenTotalGlobal = movimientos.reduce((acc: number, m: any) => acc + Number(m.cantidad || 0), 0)
+
+    return { 
+      dataArray, 
+      top5, 
+      volumenTotalGlobal,
+      totalMovimientosGlobal: movimientos.length
+    }
+  }, [trabajadores, movimientos])
 
   const manejarAnalisisIA = async () => {
-    if (trabajadores.length === 0) {
+    if (movimientos.length === 0) {
       toast({
         title: "Sin datos",
-        description: "Necesitas registrar trabajadores para realizar un análisis.",
+        description: "Se requieren movimientos registrados para analizar el desempeño.",
         variant: "destructive"
       })
       return
@@ -72,22 +106,23 @@ export default function AnalisisPersonalPage() {
     setIsCargandoIA(true)
     try {
       const resultado = await analizarPersonal({
-        trabajadores: trabajadores.map((t: any) => ({
-          nombre: t.nombre,
-          rol: t.rol,
-          activo: t.activo,
-          fechaRegistro: t.fechaRegistro
+        estadisticas: stats.dataArray.map(s => ({
+          nombre: s.nombre,
+          rol: s.rol,
+          totalMovimientos: s.totalMovimientos,
+          volumenTotal: s.volumenTotal,
+          materialesDistintos: s.materialesDistintos
         }))
       })
       setAnalisisIA(resultado)
       toast({
-        title: "Análisis completado",
-        description: "Insights generados exitosamente por la IA.",
+        title: "Evaluación completada",
+        description: "Insights de desempeño generados por la IA.",
       })
     } catch (error) {
       toast({
         title: "Error",
-        description: "No se pudo conectar con el motor de IA.",
+        description: "No se pudo procesar el análisis de rendimiento.",
         variant: "destructive"
       })
     } finally {
@@ -101,19 +136,19 @@ export default function AnalisisPersonalPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-primary/10">
-              <PieChartIcon strokeWidth={1.5} className="h-6 w-6 text-primary" />
+              <TrendingUp strokeWidth={1.5} className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Análisis de Personal</h1>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Evaluación de Desempeño</h1>
           </div>
-          <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Métricas avanzadas y recomendaciones con Inteligencia Artificial.</p>
+          <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Análisis de carga de trabajo y eficiencia por colaborador.</p>
         </div>
         <Button 
           onClick={manejarAnalisisIA} 
-          disabled={isCargandoIA || loadingData}
+          disabled={isCargandoIA || loadingMov}
           className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground font-black shadow-lg h-12 rounded-2xl px-8"
         >
           {isCargandoIA ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <BrainCircuit strokeWidth={1.5} className="mr-2 h-5 w-5" />}
-          Optimizar con IA
+          Analizar Productividad con IA
         </Button>
       </div>
 
@@ -121,51 +156,51 @@ export default function AnalisisPersonalPage() {
         <Card className="border-none bg-white shadow-sm overflow-hidden rounded-3xl">
           <CardHeader className="pb-2 px-8 pt-8">
              <div className="flex items-center justify-between">
-                <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Dotación Total</CardTitle>
+                <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Volumen Gestionado</CardTitle>
                 <div className="p-2 rounded-xl bg-primary/5 text-primary">
-                    <UserRound strokeWidth={1.5} className="h-5 w-5" />
+                    <Box strokeWidth={1.5} className="h-5 w-5" />
                 </div>
              </div>
           </CardHeader>
           <CardContent className="px-8 pb-8">
             <div className="text-4xl font-black text-primary">
-              {loadingData ? "..." : trabajadores.length}
+              {loadingMov ? "..." : stats.volumenTotalGlobal}
             </div>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Colaboradores registrados</p>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Unidades totales movidas</p>
           </CardContent>
         </Card>
 
         <Card className="border-none bg-white shadow-sm overflow-hidden rounded-3xl">
           <CardHeader className="pb-2 px-8 pt-8">
              <div className="flex items-center justify-between">
-                <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Actividad</CardTitle>
-                <div className="p-2 rounded-xl bg-green-50 text-green-600">
-                    <ShieldCheck strokeWidth={1.5} className="h-5 w-5" />
+                <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Operaciones</CardTitle>
+                <div className="p-2 rounded-xl bg-accent/5 text-accent">
+                    <Zap strokeWidth={1.5} className="h-5 w-5" />
                 </div>
              </div>
           </CardHeader>
           <CardContent className="px-8 pb-8">
-            <div className="text-4xl font-black text-green-600">
-              {loadingData ? "..." : stats.activos}
+            <div className="text-4xl font-black text-accent">
+              {loadingMov ? "..." : stats.totalMovimientosGlobal}
             </div>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Personal en activo</p>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Registros de actividad</p>
           </CardContent>
         </Card>
 
         <Card className="border-none bg-white shadow-sm overflow-hidden rounded-3xl">
           <CardHeader className="pb-2 px-8 pt-8">
              <div className="flex items-center justify-between">
-                <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Inactivos</CardTitle>
-                <div className="p-2 rounded-xl bg-red-50 text-red-600">
-                    <UserX strokeWidth={1.5} className="h-5 w-5" />
+                <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Colaboradores</CardTitle>
+                <div className="p-2 rounded-xl bg-muted/50 text-muted-foreground">
+                    <Users strokeWidth={1.5} className="h-5 w-5" />
                 </div>
              </div>
           </CardHeader>
           <CardContent className="px-8 pb-8">
-            <div className="text-4xl font-black text-red-600">
-              {loadingData ? "..." : stats.inactivos}
+            <div className="text-4xl font-black text-muted-foreground">
+              {loadingTrab ? "..." : trabajadores.length}
             </div>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Cuentas suspendidas</p>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Personal en sistema</p>
           </CardContent>
         </Card>
       </div>
@@ -174,35 +209,39 @@ export default function AnalisisPersonalPage() {
         <Card className="bg-white border-none shadow-sm overflow-hidden rounded-3xl">
           <CardHeader className="p-8">
             <CardTitle className="flex items-center gap-2 text-primary font-black text-lg uppercase tracking-tight">
-              <PieChartIcon strokeWidth={1.5} className="h-6 w-6" /> Distribución de Roles
+              <BarChart3 strokeWidth={1.5} className="h-6 w-6" /> Top 5 Volumen por Usuario
             </CardTitle>
-            <CardDescription className="text-xs md:text-sm font-medium">Composición jerárquica basada en cargos reales.</CardDescription>
+            <CardDescription className="text-xs md:text-sm font-medium">Líderes de carga y despacho en el almacén.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] md:h-[400px] p-4">
-            {trabajadores.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={stats.chartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={80}
-                    outerRadius={120}
-                    paddingAngle={10}
-                    dataKey="value"
-                  >
-                    {stats.chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="stroke-none" />
-                    ))}
-                  </Pie>
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase', letterSpacing: '0.1em' }} />
-                </PieChart>
-              </ResponsiveContainer>
+            {stats.top5.length > 0 ? (
+              <ChartContainer config={{ volume: { label: "Volumen", color: "hsl(var(--primary))" } }} className="h-full w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.top5} layout="vertical" margin={{ left: 20 }}>
+                    <CartesianGrid horizontal={false} strokeDasharray="3 3" opacity={0.1} />
+                    <XAxis type="number" hide />
+                    <YAxis 
+                      dataKey="nombre" 
+                      type="category" 
+                      fontSize={10} 
+                      fontFamily="Inter"
+                      fontWeight="bold"
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="volumenTotal" fill="hsl(var(--primary))" radius={[0, 8, 8, 0]}>
+                      {stats.top5.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
             ) : (
               <div className="h-full flex flex-col items-center justify-center opacity-20">
-                <PieChartIcon strokeWidth={1} className="h-24 w-24 mb-4" />
-                <p className="font-black text-xs uppercase tracking-widest">Esperando datos...</p>
+                <BarChart3 strokeWidth={1} className="h-24 w-24 mb-4" />
+                <p className="font-black text-xs uppercase tracking-widest">Esperando movimientos...</p>
               </div>
             )}
           </CardContent>
@@ -213,21 +252,34 @@ export default function AnalisisPersonalPage() {
             <CardHeader className="p-8 md:p-10">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-3 text-primary font-black text-xl">
-                  <Sparkles strokeWidth={1.5} className="h-7 w-7 text-accent" /> Insights Estratégicos
+                  <Sparkles strokeWidth={1.5} className="h-7 w-7 text-accent" /> Insights de IA
                 </CardTitle>
                 <div className="bg-accent/20 text-accent-foreground px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
-                  AI Active
+                  Active Intelligence
                 </div>
               </div>
-              <CardDescription className="text-primary/70 font-bold text-xs uppercase tracking-widest mt-3">Análisis dinámico de dotación</CardDescription>
             </CardHeader>
             <CardContent className="space-y-8 p-8 md:p-10 pt-0">
               <div className="text-sm leading-relaxed text-foreground/80 font-medium whitespace-pre-wrap bg-white/60 p-8 rounded-3xl border border-primary/5 shadow-inner">
                 {analisisIA.analisis}
               </div>
+
+              <div className="space-y-4">
+                <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                  <Award strokeWidth={2} className="h-4 w-4" /> Colaboradores Destacados
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {analisisIA.destacados.map((item, i) => (
+                    <div key={i} className="bg-white px-4 py-2 rounded-2xl border border-primary/10 shadow-sm text-xs font-black text-primary uppercase tracking-tighter flex items-center gap-2">
+                       <TrendingUp className="h-3 w-3 text-accent" /> {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="space-y-5">
-                <h4 className="font-black text-xs uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                  <Target strokeWidth={2} className="h-4 w-4" /> Recomendaciones Tácticas
+                <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                  <Target strokeWidth={2} className="h-4 w-4" /> Hoja de Ruta Táctica
                 </h4>
                 <div className="grid gap-4">
                   {analisisIA.recomendaciones.map((rec, i) => (
@@ -247,7 +299,7 @@ export default function AnalisisPersonalPage() {
             </div>
             <h3 className="text-2xl font-black text-muted-foreground uppercase tracking-tight">Motor de IA en espera</h3>
             <p className="text-xs text-muted-foreground/60 max-w-[320px] mt-4 font-black uppercase tracking-widest leading-loose">
-              Procesa el inventario humano actual para detectar riesgos y oportunidades de gestión.
+              Procesa el historial de operaciones para detectar líderes de productividad y riesgos de sobrecarga.
             </p>
           </Card>
         )}

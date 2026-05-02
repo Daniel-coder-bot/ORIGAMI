@@ -1,27 +1,29 @@
 'use server';
 /**
- * @fileOverview Un agente de IA para analizar los datos del personal.
+ * @fileOverview Un agente de IA para analizar el desempeño y productividad del personal.
  *
- * - analizarPersonal - Función para generar un análisis estratégico de los trabajadores.
+ * - analizarPersonal - Función para generar un análisis estratégico basado en movimientos de inventario.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const AnalizarPersonalInputSchema = z.object({
-  trabajadores: z.array(z.object({
+  estadisticas: z.array(z.object({
     nombre: z.string(),
     rol: z.string(),
-    activo: z.boolean(),
-    fechaRegistro: z.string(),
-  })).describe('La lista de trabajadores registrados en el sistema.'),
+    totalMovimientos: z.number().describe('Número total de operaciones realizadas.'),
+    volumenTotal: z.number().describe('Suma total de unidades de material gestionadas.'),
+    materialesDistintos: z.number().describe('Cantidad de tipos de materiales diferentes que ha manipulado.'),
+  })).describe('Métricas de desempeño de los trabajadores basadas en movimientos reales.'),
 });
 
 export type AnalizarPersonalInput = z.infer<typeof AnalizarPersonalInputSchema>;
 
 const AnalizarPersonalOutputSchema = z.object({
-  analisis: z.string().describe('El análisis detallado generado por la IA sobre la estructura del personal.'),
-  recomendaciones: z.array(z.string()).describe('Lista de recomendaciones basadas en los datos.'),
+  analisis: z.string().describe('Análisis detallado sobre la productividad y eficiencia del equipo.'),
+  recomendaciones: z.array(z.string()).describe('Acciones sugeridas para optimizar el flujo de trabajo.'),
+  destacados: z.array(z.string()).describe('Identificación de trabajadores con desempeño excepcional.'),
 });
 
 export type AnalizarPersonalOutput = z.infer<typeof AnalizarPersonalOutputSchema>;
@@ -34,19 +36,21 @@ const promptAnalisisPersonal = ai.definePrompt({
   name: 'promptAnalisisPersonal',
   input: {schema: AnalizarPersonalInputSchema},
   output: {schema: AnalizarPersonalOutputSchema},
-  prompt: `Eres un experto en Recursos Humanos y Gestión de Operaciones. Analiza la siguiente lista de trabajadores de un almacén:
+  prompt: `Eres un experto en Gestión de Almacenes y Optimización de Productividad. Analiza el desempeño del personal basándote en su actividad reciente:
 
-Lista de Trabajadores:
-{{#each trabajadores}}
-- {{{nombre}}}: Rol: {{{rol}}}, Estado: {{#if activo}}Activo{{else}}Inactivo{{/if}}, Registrado desde: {{{fechaRegistro}}}
+Métricas de Desempeño:
+{{#each estadisticas}}
+- {{{nombre}}} ({{{rol}}}): {{{totalMovimientos}}} movimientos realizados, {{{volumenTotal}}} unidades totales gestionadas, ha manejado {{{materialesDistintos}}} tipos de materiales.
 {{/each}}
 
 Tu tarea es:
-1. Proporcionar un resumen ejecutivo de la composición del equipo (distribución de roles y balance de actividad).
-2. Identificar posibles riesgos (por ejemplo, pocos supervisores, exceso de inactividad).
-3. Sugerir 3 recomendaciones para optimizar la gestión del personal.
+1. Evaluar quiénes son los trabajadores más productivos y por qué.
+2. Detectar posibles cuellos de botella (por ejemplo, mucha carga concentrada en pocos trabajadores).
+3. Identificar si hay trabajadores con poca actividad que podrían ser mejor aprovechados.
+4. Generar 3 recomendaciones tácticas para mejorar la distribución de tareas.
+5. Listar a los "Destacados" del mes basándose en volumen y frecuencia.
 
-Por favor, genera la respuesta en español de forma profesional y concisa.`,
+Por favor, genera la respuesta en español con un tono profesional, motivador y orientado a datos.`,
 });
 
 const analizarPersonalFlow = ai.defineFlow(
@@ -58,7 +62,7 @@ const analizarPersonalFlow = ai.defineFlow(
   async input => {
     const {output} = await promptAnalisisPersonal(input);
     if (!output) {
-      throw new Error('No se pudo generar el análisis del personal.');
+      throw new Error('No se pudo generar el análisis de desempeño del personal.');
     }
     return output;
   }
