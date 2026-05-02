@@ -26,7 +26,8 @@ export default function LoginPage() {
   const [workerId, setWorkerId] = useState('');
 
   const trabajadoresRef = useMemoFirebase(() => db ? collection(db, 'trabajadores') : null, [db]);
-  const { data: workers = [] } = useCollection(trabajadoresRef);
+  const { data: workersData } = useCollection(trabajadoresRef);
+  const workers = workersData || [];
 
   // Función de recuperación para Mauricio Fabián reyes Jiménez
   useEffect(() => {
