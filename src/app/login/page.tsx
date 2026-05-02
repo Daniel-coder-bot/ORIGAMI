@@ -32,30 +32,37 @@ export default function LoginPage() {
     async function fixMauricio() {
       if (!db) return;
       try {
-        const q = query(collection(db, 'trabajadores'), where('nombre', '==', 'Mauricio Fabián reyes Jiménez'));
-        const snapshot = await getDocs(q);
-        
-        if (!snapshot.empty) {
-          const workerDoc = snapshot.docs[0];
-          const workerData = workerDoc.data();
+        // Buscamos con ambas variaciones de 'Reyes' por si acaso
+        const nombresABuscar = [
+          'Mauricio Fabián Reyes Jiménez',
+          'Mauricio Fabián reyes Jiménez'
+        ];
+
+        for (const nombre of nombresABuscar) {
+          const q = query(collection(db, 'trabajadores'), where('nombre', '==', nombre));
+          const snapshot = await getDocs(q);
           
-          if (workerData.rol === 'Administrador' || workerData.rol === 'Gestor de Proyecto') {
-            setDoc(doc(db, 'usuarios', workerDoc.id), {
-              email: workerData.correo,
-              password: workerData.password || '1234',
+          if (!snapshot.empty) {
+            const workerDoc = snapshot.docs[0];
+            const workerData = workerDoc.data();
+            
+            // Forzamos que sea Administrador y tenga la clave 1234
+            await setDoc(doc(db, 'usuarios', workerDoc.id), {
+              email: workerData.correo || 'mauricio@admin.com',
+              password: '1234',
               nombre: workerData.nombre,
-              role: workerData.rol
+              role: 'Administrador'
             }, { merge: true });
 
-            if (!workerData.password) {
-              updateDoc(doc(db, 'trabajadores', workerDoc.id), {
-                password: '1234'
-              });
-            }
+            // También actualizamos el registro de trabajador para que sea consistente
+            await updateDoc(doc(db, 'trabajadores', workerDoc.id), {
+              rol: 'Administrador',
+              password: '1234'
+            });
           }
         }
       } catch (e) {
-        // Error silencioso
+        console.error("Error reparando cuenta:", e);
       }
     }
     fixMauricio();
@@ -64,13 +71,13 @@ export default function LoginPage() {
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!db) {
-      toast({ title: 'Error', description: 'El sistema no está listo. Reintenta en un momento.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'El sistema no está listo.', variant: 'destructive' });
       return;
     }
     setLoading(true);
 
     try {
-      // Intento 1: Buscar por correo
+      // Intento 1: Buscar por correo exacto
       let q = query(
         collection(db, 'usuarios'), 
         where('email', '==', identifier),
@@ -103,7 +110,7 @@ export default function LoginPage() {
     } catch (error: any) {
       toast({ 
         title: 'Error de conexión', 
-        description: error.message || 'No se pudo conectar con el servidor. Verifica tu internet.', 
+        description: 'Verifica tu conexión. No se pudo validar el usuario.', 
         variant: 'destructive' 
       });
     } finally {
@@ -153,7 +160,7 @@ export default function LoginPage() {
             <Card className="border-none shadow-2xl bg-white rounded-[2rem] overflow-hidden mt-4">
               <CardHeader className="p-8 pb-4">
                 <CardTitle className="text-xl font-black text-primary">Acceso Administrativo</CardTitle>
-                <CardDescription className="font-medium">Nombre completo o correo.</CardDescription>
+                <CardDescription className="font-medium text-xs">Usa tu Nombre Completo o Correo.</CardDescription>
               </CardHeader>
               <CardContent className="p-8 pt-4">
                 <form onSubmit={handleAdminLogin} className="space-y-6">
@@ -190,7 +197,7 @@ export default function LoginPage() {
             <Card className="border-none shadow-2xl bg-white rounded-[2rem] overflow-hidden mt-4">
               <CardHeader className="p-8 pb-4">
                 <CardTitle className="text-xl font-black text-primary">Acceso de Operario</CardTitle>
-                <CardDescription className="font-medium">Busca tu nombre en la lista.</CardDescription>
+                <CardDescription className="font-medium text-xs">Busca tu nombre en la lista.</CardDescription>
               </CardHeader>
               <CardContent className="p-8 pt-4">
                 <div className="space-y-6">
@@ -201,7 +208,7 @@ export default function LoginPage() {
                         <SelectValue placeholder="¿Quién eres?" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl border-none shadow-2xl">
-                        {workers.map((w: any) => (
+                        {(workers || []).map((w: any) => (
                           <SelectItem key={w.id} value={w.id} className="py-3 font-bold">{w.nombre}</SelectItem>
                         ))}
                       </SelectContent>
