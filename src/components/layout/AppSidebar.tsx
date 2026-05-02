@@ -12,7 +12,8 @@ import {
   History,
   ClipboardList,
   PieChart,
-  LogOut
+  LogOut,
+  Database
 } from "lucide-react"
 import { useAuth } from "@/context/auth-context"
 
@@ -72,6 +73,12 @@ export function AppSidebar() {
         url: "/analisis-personal",
         icon: PieChart,
         roles: ["Administrador", "Gestor de Proyecto"],
+      },
+      {
+        title: "Generar Datos",
+        url: "/seed",
+        icon: Database,
+        roles: ["Administrador"],
       },
     ]
 
