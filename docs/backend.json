@@ -31,6 +31,20 @@
       },
       "required": ["materialId", "tipo", "cantidad", "fecha"]
     },
+    "Trabajador": {
+      "title": "Trabajador",
+      "description": "Perfil de un empleado del sistema.",
+      "type": "object",
+      "properties": {
+        "nombre": { "type": "string" },
+        "correo": { "type": "string", "format": "email" },
+        "rol": { "type": "string", "enum": ["administrador", "operario", "supervisor"] },
+        "telefono": { "type": "string" },
+        "activo": { "type": "boolean" },
+        "fechaRegistro": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nombre", "correo", "rol"]
+    },
     "Alerta": {
       "title": "Alerta",
       "description": "Notificaciones de stock bajo u otros eventos.",
@@ -54,6 +68,10 @@
     "/movimientos/{movimientoId}": {
       "schema": "#/backend/entities/Movimiento",
       "description": "Registro histórico de movimientos."
+    },
+    "/trabajadores/{trabajadorId}": {
+      "schema": "#/backend/entities/Trabajador",
+      "description": "Directorio de personal."
     },
     "/alertas/{alertaId}": {
       "schema": "#/backend/entities/Alerta",
