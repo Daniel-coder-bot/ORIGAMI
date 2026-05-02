@@ -26,7 +26,8 @@ export default function LoginPage() {
   const [workerId, setWorkerId] = useState('');
 
   const workersRef = useMemoFirebase(() => db ? collection(db, 'trabajadores') : null, [db]);
-  const { data: workers = [] } = useCollection(workersRef);
+  const { data: workersData } = useCollection(workersRef);
+  const workers = workersData || [];
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +45,7 @@ export default function LoginPage() {
           id: snapshot.docs[0].id,
           nombre: userData.nombre,
           correo: userData.email,
-          role: userData.role,
+          role: userData.role as any,
         });
         toast({ title: 'Bienvenido', description: `Sesión iniciada como ${userData.role}` });
       } else {
