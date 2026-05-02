@@ -1,0 +1,166 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * CORE PHILOSOPHY:
+     * This ruleset implements a robust Role-Based Access Control (RBAC) system optimized for performance
+     * through denormalization. By using dedicated auxiliary collections for roles (/rolesAdministradores
+     * and /rolesAlmacenistas), we perform authorization checks using atomical 'exists' queries,
+     * avoiding complex recursive logic or expensive document fetches.
+     *
+     * DATA STRUCTURE:
+     * - /roles: Global definitions of available roles.
+     * - /trabajadores: User profiles, where document ID matches the Firebase Auth UID.
+     * - /rolesAdministradores & /rolesAlmacenistas: Fast-lookup mapping of UIDs to specific permissions.
+     * - /articulos: Central inventory managed by authorized roles.
+     * - /movimientosStock: Audit logs of inventory changes.
+     *
+     * KEY SECURITY DECISIONS:
+     * 1. Authorization Denormalization: Role verification is performed against auxiliary collections
+     *    to ensure rules are non-blocking and highly performant.
+     * 2. Strict User-Ownership: Workers can only manage their own profile data, while Admins
+     *    maintain oversight.
+     * 3. Inventory Protection: Access to articles and stock movements is strictly limited to 
+     *    users verified as 'Administrador' or 'Almacenista'.
+     * 4. Relational Integrity: Enforces that workers logging stock movements must use their own UID.
+     */
+
+    // --- HELPER FUNCTIONS ---
+
+    /** Checks if the user is authenticated. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** Checks if the authenticated user has the Admin role via auxiliary collection. */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/rolesAdministradores/$(request.auth.uid));
+    }
+
+    /** Checks if the authenticated user has the Almacenista role via auxiliary collection. */
+    function isAlmacenista() {
+      return isSignedIn() && exists(/databases/$(database)/documents/rolesAlmacenistas/$(request.auth.uid));
+    }
+
+    /** Checks if the authenticated user matches the provided ID (Ownership). */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** Combines ownership check with existence check for updates and deletes. */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    /** Validates that critical relational fields remain immutable during updates. */
+    function isFieldImmutable(fieldName) {
+      return request.resource.data[fieldName] == resource.data[fieldName];
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description System-wide role definitions.
+     * @path /roles/{rolId}
+     * @allow Authenticated users can read roles to understand system permissions.
+     * @deny Non-admins attempting to create or modify roles.
+     * @principle Pattern 2: Global admin-only writes.
+     */
+    match /roles/{rolId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Worker profiles. Tied to Firebase Auth UID.
+     * @path /trabajadores/{trabajadorId}
+     * @allow User 'abc' creating their own profile at /trabajadores/abc.
+     * @deny User 'abc' attempting to update the profile of user 'xyz'.
+     * @principle Pattern 1 & 4: Ownership for users, with Admin oversight.
+     */
+    match /trabajadores/{trabajadorId} {
+      allow get, list: if isOwner(trabajadorId) || isAdmin();
+      allow create: if isOwner(trabajadorId) || isAdmin();
+      allow update, delete: if isExistingOwner(trabajadorId) || isAdmin();
+    }
+
+    /**
+     * @description Auxiliary collection for Admin role verification.
+     * @path /rolesAdministradores/{trabajadorId}
+     * @allow Admins creating a new admin mapping.
+     * @deny Any user attempting to self-promote to Admin.
+     * @principle Pattern 2: Restricted auxiliary collection for RBAC.
+     */
+    match /rolesAdministradores/{trabajadorId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Auxiliary collection for Almacenista role verification.
+     * @path /rolesAlmacenistas/{trabajadorId}
+     * @allow Admins assigning the warehouse role to a worker.
+     * @deny Warehouse workers attempting to delete their own role record.
+     * @principle Pattern 2: Restricted auxiliary collection for RBAC.
+     */
+    match /rolesAlmacenistas/{trabajadorId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Global inventory items.
+     * @path /articulos/{articuloId}
+     * @allow An 'Almacenista' updating the stock count.
+     * @deny A worker without a specific inventory role attempting to read the list.
+     * @principle Pattern 3: Shared Access for authorized personnel.
+     */
+    match /articulos/{articuloId} {
+      allow get, list: if isAdmin() || isAlmacenista();
+      allow create, update, delete: if isAdmin() || isAlmacenista();
+    }
+
+    /**
+     * @description Logs of stock movements.
+     * @path /movimientosStock/{movimientoStockId}
+     * @allow A worker creating a movement record that correctly references their own UID.
+     * @deny A worker creating a movement record but spoofing the 'trabajadorId' as someone else.
+     * @principle Relational integrity and role-based shared access.
+     */
+    match /movimientosStock/{movimientoStockId} {
+      allow get, list: if isAdmin() || isAlmacenista();
+      allow create: if (isAdmin() || isAlmacenista()) && request.resource.data.trabajadorId == request.auth.uid;
+      // Movements are typically immutable for audit purposes.
+      allow update: if (isAdmin() || isAlmacenista()) && isFieldImmutable('trabajadorId') && isFieldImmutable('articuloId');
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description Catch-all to deny any access not explicitly granted above.
+     * This catch-all must be inside the `/databases/{database}/documents` block.
+     */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+/** 
+ * PROTOTYPING NOTE: 
+ * These rules prioritize authorization logic (WHO can access) over schema validation (WHAT the data looks like). 
+ * Data types and optional fields are not strictly enforced to allow for rapid frontend iteration.
+ */
+
+/*
+  REASONING SUMMARY:
+  The user reported issues with data not persisting (workers and roles disappearing). 
+  This logic ensures:
+  1. Workers can 'create' their own profiles (isOwner(trabajadorId) on create).
+  2. The auxiliary collections used for role checks are readable by the system to verify permissions.
+  3. Relational integrity ensures that data saved to 'movimientosStock' is tied to the actual authenticated user.
+*/
+
+/**
+ * End of Generated Security Rules.
+ */

@@ -1,93 +1,245 @@
-
 {
   "entities": {
-    "Material": {
-      "title": "Material",
-      "description": "Representa un artículo o material en el inventario.",
+    "Rol": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Rol",
       "type": "object",
+      "description": "Define los roles que los trabajadores pueden tener dentro del sistema, incluyendo sus permisos para interactuar con el inventario.",
       "properties": {
-        "codigo": { "type": "string", "description": "Código único de identificación del material." },
-        "nombre": { "type": "string" },
-        "descripcion": { "type": "string" },
-        "unidad": { "type": "string" },
-        "categoria": { "type": "string" },
-        "stockActual": { "type": "number" },
-        "stockMinimo": { "type": "number" }
+        "id": {
+          "type": "string",
+          "description": "Identificador único para el rol."
+        },
+        "nombre": {
+          "type": "string",
+          "description": "Nombre del rol (ej. Administrador, Almacenista)."
+        },
+        "descripcion": {
+          "type": "string",
+          "description": "Descripción de las responsabilidades y permisos asociados a este rol."
+        }
       },
-      "required": ["codigo", "nombre", "unidad", "stockActual"]
-    },
-    "Movimiento": {
-      "title": "Movimiento",
-      "description": "Registro de entrada o salida de un material.",
-      "type": "object",
-      "properties": {
-        "materialId": { "type": "string" },
-        "materialNombre": { "type": "string" },
-        "trabajadorId": { "type": "string" },
-        "trabajadorNombre": { "type": "string" },
-        "tipo": { "type": "string" },
-        "cantidad": { "type": "number" },
-        "fecha": { "type": "string", "format": "date-time" },
-        "notas": { "type": "string" }
-      },
-      "required": ["materialId", "tipo", "cantidad", "fecha"]
+      "required": [
+        "id",
+        "nombre",
+        "descripcion"
+      ]
     },
     "Trabajador": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Trabajador",
-      "description": "Perfil de un empleado del sistema.",
       "type": "object",
+      "description": "Representa a un empleado o usuario del sistema con acceso a las funcionalidades del gestor de stock y es la entidad solicitada para la persistencia.",
       "properties": {
-        "nombre": { "type": "string" },
-        "correo": { "type": "string", "format": "email" },
-        "rol": { "type": "string" },
-        "telefono": { "type": "string" },
-        "activo": { "type": "boolean" },
-        "fechaRegistro": { "type": "string", "format": "date-time" }
+        "id": {
+          "type": "string",
+          "description": "Identificador único para el trabajador."
+        },
+        "nombre": {
+          "type": "string",
+          "description": "Nombre completo del trabajador."
+        },
+        "email": {
+          "type": "string",
+          "description": "Correo electrónico del trabajador.",
+          "format": "email"
+        },
+        "rolId": {
+          "type": "string",
+          "description": "Referencia al Rol asignado al trabajador. (Relación: Rol 1:N Trabajador)"
+        }
       },
-      "required": ["nombre", "correo", "rol"]
+      "required": [
+        "id",
+        "nombre",
+        "rolId"
+      ]
     },
-    "Categoria": {
-      "title": "Categoría",
-      "description": "Categoría de clasificación para materiales.",
+    "Articulo": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Articulo",
       "type": "object",
+      "description": "Define un artículo o producto que se gestiona en el inventario, incluyendo sus detalles y la cantidad actual disponible.",
       "properties": {
-        "nombre": { "type": "string" }
+        "id": {
+          "type": "string",
+          "description": "Identificador único para el artículo de inventario."
+        },
+        "nombre": {
+          "type": "string",
+          "description": "Nombre del artículo."
+        },
+        "descripcion": {
+          "type": "string",
+          "description": "Descripción detallada del artículo, posiblemente generada por IA."
+        },
+        "unidadMedida": {
+          "type": "string",
+          "description": "Unidad de medida para el artículo (ej. unidades, kg, litros)."
+        },
+        "stockActual": {
+          "type": "number",
+          "description": "Cantidad actual disponible de este artículo en el inventario."
+        }
       },
-      "required": ["nombre"]
+      "required": [
+        "id",
+        "nombre",
+        "unidadMedida",
+        "stockActual"
+      ]
     },
-    "Rol": {
-      "title": "Rol",
-      "description": "Cargo o rol para los trabajadores.",
+    "MovimientoStock": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MovimientoStock",
       "type": "object",
+      "description": "Registra cada entrada o salida de un artículo del inventario, incluyendo detalles como el trabajador que lo realizó, la cantidad y la fecha.",
       "properties": {
-        "nombre": { "type": "string" }
+        "id": {
+          "type": "string",
+          "description": "Identificador único para el movimiento de stock."
+        },
+        "articuloId": {
+          "type": "string",
+          "description": "Referencia al artículo afectado por el movimiento. (Relación: Articulo 1:N MovimientoStock)"
+        },
+        "trabajadorId": {
+          "type": "string",
+          "description": "Referencia al trabajador que realizó el movimiento. (Relación: Trabajador 1:N MovimientoStock)"
+        },
+        "tipoMovimiento": {
+          "type": "string",
+          "description": "Tipo de movimiento (ej. 'Entrada' o 'Salida')."
+        },
+        "cantidad": {
+          "type": "number",
+          "description": "Cantidad de unidades del artículo que se movieron."
+        },
+        "fechaHora": {
+          "type": "string",
+          "description": "Fecha y hora en que se registró el movimiento.",
+          "format": "date-time"
+        },
+        "observaciones": {
+          "type": "string",
+          "description": "Observaciones o notas adicionales sobre el movimiento."
+        }
       },
-      "required": ["nombre"]
+      "required": [
+        "id",
+        "articuloId",
+        "trabajadorId",
+        "tipoMovimiento",
+        "cantidad",
+        "fechaHora"
+      ]
     }
   },
   "auth": {
-    "providers": ["google.com"]
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
-    "/materiales/{materialId}": {
-      "schema": "#/backend/entities/Material",
-      "description": "Colección de materiales de inventario."
-    },
-    "/movimientos/{movimientoId}": {
-      "schema": "#/backend/entities/Movimiento",
-      "description": "Registro histórico de movimientos."
-    },
-    "/trabajadores/{trabajadorId}": {
-      "schema": "#/backend/entities/Trabajador",
-      "description": "Directorio de personal."
-    },
-    "/categorias/{categoriaId}": {
-      "schema": "#/backend/entities/Categoria",
-      "description": "Lista maestra de categorías de inventario."
-    },
-    "/roles/{rolId}": {
-      "schema": "#/backend/entities/Rol",
-      "description": "Lista maestra de roles de personal."
-    }
+    "structure": [
+      {
+        "path": "/roles/{rolId}",
+        "definition": {
+          "entityName": "Rol",
+          "schema": {
+            "$ref": "#/backend/entities/Rol"
+          },
+          "description": "Colección global que define los distintos roles que pueden tener los trabajadores. Se utiliza para establecer permisos a nivel de sistema. Acceso restringido a administradores.",
+          "params": [
+            {
+              "name": "rolId",
+              "description": "Identificador único del rol."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/trabajadores/{trabajadorId}",
+        "definition": {
+          "entityName": "Trabajador",
+          "schema": {
+            "$ref": "#/backend/entities/Trabajador"
+          },
+          "description": "Almacena los perfiles de los trabajadores. El 'trabajadorId' debe coincidir con el 'uid' de Firebase Authentication para la autenticación y autorización basada en el usuario. Incluye 'rolId' como clave foránea al rol asignado.",
+          "params": [
+            {
+              "name": "trabajadorId",
+              "description": "Identificador único del trabajador, que debe ser el 'uid' de Firebase Auth."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/rolesAdministradores/{trabajadorId}",
+        "definition": {
+          "entityName": "Trabajador",
+          "schema": {
+            "$ref": "#/backend/entities/Trabajador"
+          },
+          "description": "Colección auxiliar denormalizada para la verificación rápida de roles de 'Administrador'. Un documento en esta colección significa que el 'trabajadorId' correspondiente (el 'uid' del usuario autenticado) tiene el rol de Administrador. Su existencia permite reglas de seguridad atómicas y eficientes para autorizar acciones administrativas. Incluye denormalización para la independencia de autorización (CRÍTICO).",
+          "params": [
+            {
+              "name": "trabajadorId",
+              "description": "Identificador único del trabajador, que debe ser el 'uid' de Firebase Auth, indicando que es Administrador."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/rolesAlmacenistas/{trabajadorId}",
+        "definition": {
+          "entityName": "Trabajador",
+          "schema": {
+            "$ref": "#/backend/entities/Trabajador"
+          },
+          "description": "Colección auxiliar denormalizada para la verificación rápida de roles de 'Almacenista'. Un documento en esta colección significa que el 'trabajadorId' correspondiente (el 'uid' del usuario autenticado) tiene el rol de Almacenista. Su existencia permite reglas de seguridad atómicas y eficientes para autorizar acciones relacionadas con el inventario. Incluye denormalización para la independencia de autorización (CRÍTICO).",
+          "params": [
+            {
+              "name": "trabajadorId",
+              "description": "Identificador único del trabajador, que debe ser el 'uid' de Firebase Auth, indicando que es Almacenista."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/articulos/{articuloId}",
+        "definition": {
+          "entityName": "Articulo",
+          "schema": {
+            "$ref": "#/backend/entities/Articulo"
+          },
+          "description": "Colección global para todos los artículos del inventario. Contiene detalles y el stock actual de cada artículo. Acceso restringido a trabajadores con roles de 'Administrador' o 'Almacenista'.",
+          "params": [
+            {
+              "name": "articuloId",
+              "description": "Identificador único del artículo de inventario."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/movimientosStock/{movimientoStockId}",
+        "definition": {
+          "entityName": "MovimientoStock",
+          "schema": {
+            "$ref": "#/backend/entities/MovimientoStock"
+          },
+          "description": "Colección global que registra cada entrada y salida de artículos del inventario. Cada movimiento está asociado a un 'articuloId' y un 'trabajadorId' específico. Acceso y creación restringidos según los roles del trabajador (ej. 'Administrador', 'Almacenista').",
+          "params": [
+            {
+              "name": "movimientoStockId",
+              "description": "Identificador único del movimiento de stock."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "El diseño de la estructura de datos de Firestore para el 'Gestor de Stock y Personal' se ha basado rigurosamente en los principios de seguridad, escalabilidad y depurabilidad. Se utilizan colecciones de nivel superior para cada entidad principal: 'roles', 'trabajadores', 'articulos' y 'movimientosStock'.\n\n**Justificación del Diseño:**\n\n1.  **Independencia de Autorización (CRÍTICO):** Para eliminar las dependencias jerárquicas en las reglas de seguridad y permitir operaciones atómicas, hemos denormalizado el contexto de autorización. En lugar de depender de leer el documento del 'Trabajador' para determinar su rol (`get(/trabajadores/$(request.auth.uid)).data.rolId`), hemos introducido colecciones auxiliares dedicadas: `/rolesAdministradores/{trabajadorId}` y `/rolesAlmacenistas/{trabajadorId}`. La existencia de un documento en estas colecciones (donde `trabajadorId` es el `request.auth.uid`) confiere el rol correspondiente. Esto permite que las reglas de seguridad utilicen simplemente `exists(/databases/$(database)/documents/rolesAdministradores/$(request.auth.uid))` para verificar el rol, haciendo las comprobaciones de autorización atómicas, rápidas y fáciles de depurar, y habilitando la creación/actualización de documentos relacionados en transacciones o lotes sin conflictos por lecturas intermedias de reglas.\n\n2.  **Soporte para QAPs (Consultas con Autorización Previa):** La estructura garantiza que las reglas no funcionen como filtros y que las operaciones `list` sean seguras y eficientes. Al segregar los datos en colecciones con posturas de seguridad homogéneas y al denormalizar los roles, podemos aplicar reglas de seguridad a nivel de colección. Por ejemplo, para listar todos los 'Articulos', la regla puede ser simplemente `allow list: if exists(/databases/$(database)/documents/rolesAdministradores/$(request.auth.uid)) || exists(/databases/$(database)/documents/rolesAlmacenistas/$(request.auth.uid));`. Esto permite que el cliente realice una consulta de 'lista' a toda la colección sin necesidad de filtros adicionales, ya que la autorización se determina en función del rol del usuario autenticado (derivado de las colecciones denormalizadas) antes de que se ejecute la consulta, cumpliendo con el principio de QAPs.\n\n3.  **Modelado de Acceso Consistente:**\n    *   **Datos Privados/User-Owned:** La colección `/trabajadores/{trabajadorId}` utiliza el `trabajadorId` (que será el `uid` de Firebase Auth) como clave del documento, facilitando reglas de acceso basadas en la propiedad individual (`request.auth.uid == trabajadorId`).\n    *   **Roles Globales (DBAC):** Se implementa el patrón de 'Existencia sobre Contenido' con las colecciones auxiliares para roles (`/rolesAdministradores`, `/rolesAlmacenistas`), lo que permite una verificación de roles de forma sencilla y directa en las reglas de seguridad. La asignación de roles a los trabajadores se gestiona en el campo `rolId` del documento 'Trabajador' y se refleja en estas colecciones auxiliares mediante actualizaciones atómicas.\n\n4.  **Claridad y Predicibilidad de Datos:** Se utilizan nombres de colecciones y parámetros de ruta semánticos en español (`roles`, `trabajadores`, `articulos`, `movimientosStock`, `{rolId}`, `{trabajadorId}`, etc.) para mejorar la legibilidad y la comprensión de la estructura. Los campos de cada entidad siguen los esquemas proporcionados, promoviendo una consistencia radical."
   }
 }
