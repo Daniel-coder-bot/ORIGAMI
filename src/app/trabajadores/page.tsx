@@ -6,17 +6,9 @@ import {
   Plus, 
   Search, 
   UserRound, 
-  Shield, 
   MoreHorizontal, 
-  CheckCircle2, 
-  XCircle, 
   PenLine, 
-  ShieldAlert,
   Trash2,
-  Briefcase,
-  Check,
-  Key,
-  Mail
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,18 +26,14 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import {
@@ -56,9 +44,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase'
-import { collection, doc, serverTimestamp, deleteDoc, setDoc, updateDoc } from 'firebase/firestore'
+import { collection, doc, serverTimestamp, deleteDoc, setDoc, updateDoc, addDoc } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
-import { updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
+import { errorEmitter } from '@/firebase/error-emitter'
+import { FirestorePermissionError } from '@/firebase/errors'
 
 export default function TrabajadoresPage() {
   const db = useFirestore()
@@ -95,7 +84,7 @@ export default function TrabajadoresPage() {
     )
   }, [trabajadores, busqueda])
 
-  const manejarGuardarTrabajador = async () => {
+  const manejarGuardarTrabajador = () => {
     if (!db) return
     if (!formTrabajador.nombre || !formTrabajador.correo || !formTrabajador.rol) {
       toast({ title: "Faltan datos", variant: "destructive" })
@@ -107,38 +96,57 @@ export default function TrabajadoresPage() {
       updatedAt: serverTimestamp()
     }
 
-    try {
-      if (isEditando && trabajadorSeleccionadoId) {
-        await updateDoc(doc(db, 'trabajadores', trabajadorSeleccionadoId), payload);
-        if (payload.rol === 'Administrador' || payload.rol === 'Gestor de Proyecto') {
-          await setDoc(doc(db, 'usuarios', trabajadorSeleccionadoId), {
-            email: payload.correo,
-            password: payload.password,
-            nombre: payload.nombre,
-            role: payload.rol
-          }, { merge: true });
-        }
-        toast({ title: "Perfil actualizado" });
-      } else {
-        const docRef = await addDoc(collection(db, 'trabajadores'), {
-          ...payload,
-          fechaRegistro: new Date().toISOString(),
-          createdAt: serverTimestamp()
-        });
-        if (payload.rol === 'Administrador' || payload.rol === 'Gestor de Proyecto') {
-          await setDoc(doc(db, 'usuarios', docRef.id), {
-            email: payload.correo,
-            password: payload.password,
-            nombre: payload.nombre,
-            role: payload.rol
-          }, { merge: true });
-        }
-        toast({ title: "Trabajador registrado" });
+    if (isEditando && trabajadorSeleccionadoId) {
+      const docRef = doc(db, 'trabajadores', trabajadorSeleccionadoId)
+      updateDoc(docRef, payload)
+        .then(() => {
+          if (payload.rol === 'Administrador' || payload.rol === 'Gestor de Proyecto') {
+            setDoc(doc(db, 'usuarios', trabajadorSeleccionadoId), {
+              email: payload.correo,
+              password: payload.password,
+              nombre: payload.nombre,
+              role: payload.rol
+            }, { merge: true })
+          }
+          toast({ title: "Perfil actualizado" })
+          setOpenDialog(false)
+          setTimeout(() => window.location.reload(), 800)
+        })
+        .catch(async (err) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: payload
+          }))
+        })
+    } else {
+      const colRef = collection(db, 'trabajadores')
+      const docData = {
+        ...payload,
+        fechaRegistro: new Date().toISOString(),
+        createdAt: serverTimestamp()
       }
-      setOpenDialog(false);
-      setTimeout(() => window.location.reload(), 800);
-    } catch (e) {
-      toast({ title: "Error al guardar", variant: "destructive" });
+      addDoc(colRef, docData)
+        .then((docRef) => {
+          if (payload.rol === 'Administrador' || payload.rol === 'Gestor de Proyecto') {
+            setDoc(doc(db, 'usuarios', docRef.id), {
+              email: payload.correo,
+              password: payload.password,
+              nombre: payload.nombre,
+              role: payload.rol
+            }, { merge: true })
+          }
+          toast({ title: "Trabajador registrado" })
+          setOpenDialog(false)
+          setTimeout(() => window.location.reload(), 800)
+        })
+        .catch(async (err) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: 'trabajadores',
+            operation: 'create',
+            requestResourceData: docData
+          }))
+        })
     }
   }
 
@@ -153,25 +161,30 @@ export default function TrabajadoresPage() {
     setIsEditando(true)
     setTrabajadorSeleccionadoId(trabajador.id)
     setFormTrabajador({
-      nombre: trabajador.nombre,
-      correo: trabajador.correo,
-      rol: trabajador.rol,
+      nombre: trabajador.nombre || '',
+      correo: trabajador.correo || '',
+      rol: trabajador.rol || '',
       telefono: trabajador.telefono || '',
-      activo: trabajador.activo,
+      activo: trabajador.activo ?? true,
       password: trabajador.password || ''
     })
     setOpenDialog(true)
   }
 
-  const eliminarTrabajador = async (id: string) => {
+  const eliminarTrabajador = (id: string) => {
     if (!db) return
-    try {
-      await deleteDoc(doc(db, 'trabajadores', id));
-      toast({ title: "Trabajador eliminado" });
-      setTimeout(() => window.location.reload(), 800);
-    } catch (e) {
-      toast({ title: "Error al eliminar", variant: "destructive" });
-    }
+    const docRef = doc(db, 'trabajadores', id)
+    deleteDoc(docRef)
+      .then(() => {
+        toast({ title: "Trabajador eliminado" })
+        setTimeout(() => window.location.reload(), 800)
+      })
+      .catch(async (err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'delete'
+        }))
+      })
   }
 
   return (

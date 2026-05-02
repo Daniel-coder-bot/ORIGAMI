@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,35 @@ export default function LoginPage() {
   const { data: workersData } = useCollection(trabajadoresRef);
   const workers = workersData || [];
 
-  // Función para forzar acceso si falla el login normal
+  // Función de auto-reparación para Mauricio Fabián Reyes Jiménez
+  useEffect(() => {
+    if (!db) return;
+    
+    const repairAccount = async () => {
+      try {
+        const q = query(collection(db, 'trabajadores'), where('nombre', 'in', ['Mauricio Fabián reyes Jiménez', 'Mauricio Fabián Reyes Jiménez']));
+        const snap = await getDocs(q);
+        
+        if (!snap.empty) {
+          const docRef = snap.docs[0].ref;
+          const data = snap.docs[0].data();
+          
+          // Asegurar que Mauricio tenga el rol Admin y la contraseña 1234
+          await setDoc(doc(db, 'usuarios', docRef.id), {
+            email: data.correo || 'mauricio@admin.com',
+            password: '1234',
+            nombre: data.nombre,
+            role: 'Administrador'
+          }, { merge: true });
+        }
+      } catch (e) {
+        // Silencioso para no interrumpir el flujo
+      }
+    };
+    
+    repairAccount();
+  }, [db]);
+
   const handleEmergencyAccess = () => {
     login({
       id: 'emergency-admin',
@@ -41,14 +69,11 @@ export default function LoginPage() {
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db) {
-      toast({ title: 'Error', description: 'El sistema no está listo.', variant: 'destructive' });
-      return;
-    }
+    if (!db) return;
     setLoading(true);
 
     try {
-      // Intento 1: Buscar por correo exacto
+      // Intento por Correo
       let q = query(
         collection(db, 'usuarios'), 
         where('email', '==', identifier),
@@ -56,7 +81,7 @@ export default function LoginPage() {
       );
       let snapshot = await getDocs(q);
 
-      // Intento 2: Buscar por nombre si el primero falló
+      // Intento por Nombre
       if (snapshot.empty) {
         q = query(
           collection(db, 'usuarios'), 
@@ -79,11 +104,7 @@ export default function LoginPage() {
         toast({ title: 'Acceso denegado', description: 'Usuario o contraseña incorrectos.', variant: 'destructive' });
       }
     } catch (error: any) {
-      toast({ 
-        title: 'Error de conexión', 
-        description: 'Verifica tu conexión.', 
-        variant: 'destructive' 
-      });
+      toast({ title: 'Error de conexión', description: 'No se pudo verificar la cuenta.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -131,14 +152,14 @@ export default function LoginPage() {
             <Card className="border-none shadow-2xl bg-white rounded-[2rem] overflow-hidden mt-4">
               <CardHeader className="p-8 pb-4">
                 <CardTitle className="text-xl font-black text-primary">Acceso Administrativo</CardTitle>
-                <CardDescription className="font-medium text-xs">Usa tu Nombre Completo o Correo.</CardDescription>
+                <CardDescription className="font-medium text-xs">Ingresa tu Nombre Completo o Correo.</CardDescription>
               </CardHeader>
               <CardContent className="p-8 pt-4 space-y-6">
                 <form onSubmit={handleAdminLogin} className="space-y-6">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Usuario</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Usuario (Nombre o Correo)</Label>
                     <Input 
-                      placeholder="Nombre o Correo" 
+                      placeholder="Ej: Juan Pérez o correo@ejemplo.com" 
                       className="h-12 rounded-xl font-bold"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
@@ -169,7 +190,6 @@ export default function LoginPage() {
                   >
                     <AlertCircle className="mr-2 h-4 w-4" /> Acceso de Emergencia
                   </Button>
-                  <p className="text-[9px] text-center mt-2 text-muted-foreground font-bold uppercase">Solo para reparación manual de cuentas</p>
                 </div>
               </CardContent>
             </Card>
