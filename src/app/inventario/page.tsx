@@ -7,7 +7,7 @@ import {
   Search, 
   Box, 
   Trash2, 
-  PenLine,
+  PenLine, 
   AlertCircle,
   Hash,
   Tag,
@@ -65,14 +65,14 @@ export default function InventarioPage() {
   const articulos = articulosData || []
   const categoriasList = categoriasData || []
 
-  const [formArticulo, setFormArticulo] = useState({
+  const [formArticulo, setFormArticulo] = useState<any>({
     codigo: '',
     nombre: '',
     categoria: '',
     descripcion: '',
     unidad: 'unidades',
-    stockActual: 0,
-    stockMinimo: 5
+    stockActual: '',
+    stockMinimo: '5'
   })
 
   const filtrados = useMemo(() => {
@@ -130,8 +130,8 @@ export default function InventarioPage() {
 
     const data = {
       ...formArticulo,
-      stockActual: Number(formArticulo.stockActual),
-      stockMinimo: Number(formArticulo.stockMinimo),
+      stockActual: Number(formArticulo.stockActual) || 0,
+      stockMinimo: Number(formArticulo.stockMinimo) || 0,
       updatedAt: serverTimestamp()
     }
 
@@ -163,7 +163,7 @@ export default function InventarioPage() {
   }
 
   const resetForm = () => {
-    setFormArticulo({ codigo: '', nombre: '', categoria: '', descripcion: '', unidad: 'unidades', stockActual: 0, stockMinimo: 5 })
+    setFormArticulo({ codigo: '', nombre: '', categoria: '', descripcion: '', unidad: 'unidades', stockActual: '', stockMinimo: '5' })
   }
 
   const abrirEdicion = (articulo: any) => {
@@ -174,8 +174,8 @@ export default function InventarioPage() {
       categoria: articulo.categoria || '',
       descripcion: articulo.descripcion || '',
       unidad: articulo.unidad || 'unidades',
-      stockActual: articulo.stockActual || 0,
-      stockMinimo: articulo.stockMinimo || 5
+      stockActual: articulo.stockActual?.toString() || '0',
+      stockMinimo: articulo.stockMinimo?.toString() || '5'
     })
     setOpenDialog(true)
   }
@@ -322,12 +322,30 @@ export default function InventarioPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                    <div className="grid gap-2">
                     <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">STOCK MÍNIMO</Label>
-                    <Input type="number" value={formArticulo.stockMinimo} onChange={(e) => setFormArticulo({...formArticulo, stockMinimo: Number(e.target.value)})} className="h-12 rounded-xl" />
+                    <Input 
+                      type="text" 
+                      inputMode="numeric"
+                      value={formArticulo.stockMinimo} 
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        setFormArticulo({...formArticulo, stockMinimo: val});
+                      }} 
+                      className="h-12 rounded-xl" 
+                    />
                   </div>
                   {!editandoId && (
                     <div className="grid gap-2">
                       <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">STOCK INICIAL</Label>
-                      <Input type="number" value={formArticulo.stockActual} onChange={(e) => setFormArticulo({...formArticulo, stockActual: Number(e.target.value)})} className="h-12 rounded-xl" />
+                      <Input 
+                        type="text" 
+                        inputMode="numeric"
+                        value={formArticulo.stockActual} 
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, '');
+                          setFormArticulo({...formArticulo, stockActual: val});
+                        }} 
+                        className="h-12 rounded-xl" 
+                      />
                     </div>
                   )}
                 </div>
