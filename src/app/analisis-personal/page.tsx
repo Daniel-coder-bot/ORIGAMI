@@ -1,34 +1,24 @@
 
 "use client"
 
-import React, { useState, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { 
   BarChart3, 
   TrendingUp, 
-  Award, 
-  Sparkles, 
-  Loader2, 
-  BrainCircuit,
-  Target,
-  Zap,
+  Box, 
   Users,
-  Box,
-  ChevronRight
+  Zap
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { 
   ChartContainer, 
   ChartTooltip, 
   ChartTooltipContent 
 } from "@/components/ui/chart"
 import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, Cell, CartesianGrid } from "recharts"
-import { analizarPersonal, type AnalizarPersonalOutput } from '@/ai/flows/analizar-personal-flow'
-import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useCollection } from '@/firebase'
 import { collection } from 'firebase/firestore'
 import { useMemoFirebase } from '@/firebase/use-memo-firebase'
-import { Badge } from '@/components/ui/badge'
 
 const COLORS = [
   'hsl(var(--primary))', 
@@ -40,9 +30,6 @@ const COLORS = [
 
 export default function AnalisisPersonalPage() {
   const db = useFirestore()
-  const { toast } = useToast()
-  const [isCargandoIA, setIsCargandoIA] = useState(false)
-  const [analisisIA, setAnalisisIA] = useState<AnalizarPersonalOutput | null>(null)
 
   const trabajadoresRef = useMemoFirebase(() => db ? collection(db, 'trabajadores') : null, [db])
   const movimientosRef = useMemoFirebase(() => db ? collection(db, 'movimientos') : null, [db])
@@ -93,43 +80,6 @@ export default function AnalisisPersonalPage() {
     }
   }, [trabajadores, movimientos])
 
-  const manejarAnalisisIA = async () => {
-    if (movimientos.length === 0) {
-      toast({
-        title: "Sin datos",
-        description: "Se requieren movimientos registrados para analizar el desempeño.",
-        variant: "destructive"
-      })
-      return
-    }
-
-    setIsCargandoIA(true)
-    try {
-      const resultado = await analizarPersonal({
-        estadisticas: stats.dataArray.map(s => ({
-          nombre: s.nombre,
-          rol: s.rol,
-          totalMovimientos: s.totalMovimientos,
-          volumenTotal: s.volumenTotal,
-          materialesDistintos: s.materialesDistintos
-        }))
-      })
-      setAnalisisIA(resultado)
-      toast({
-        title: "Análisis generado",
-        description: "Insights estratégicos listos para revisión.",
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo procesar el análisis de rendimiento.",
-        variant: "destructive"
-      })
-    } finally {
-      setIsCargandoIA(false)
-    }
-  }
-
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -140,16 +90,8 @@ export default function AnalisisPersonalPage() {
             </div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Evaluación de Desempeño</h1>
           </div>
-          <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Métricas de carga de trabajo y productividad real.</p>
+          <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Métricas de carga de trabajo y productividad real por colaborador.</p>
         </div>
-        <Button 
-          onClick={manejarAnalisisIA} 
-          disabled={isCargandoIA || loadingMov}
-          className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground font-black shadow-lg h-12 rounded-2xl px-8"
-        >
-          {isCargandoIA ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles strokeWidth={1.5} className="mr-2 h-5 w-5" />}
-          Generar Insights con IA
-        </Button>
       </div>
 
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
@@ -248,40 +190,16 @@ export default function AnalisisPersonalPage() {
         </Card>
 
         <div className="space-y-6">
-          {analisisIA && (
-            <Card className="bg-primary/5 border-none shadow-xl animate-in zoom-in-95 duration-500 overflow-hidden rounded-[2.5rem] ring-1 ring-primary/10">
-              <CardHeader className="p-8 pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-3 text-primary font-black text-xl">
-                    <Sparkles strokeWidth={1.5} className="h-7 w-7 text-accent" /> Insights Estratégicos
-                  </CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6 p-8 pt-0">
-                <div className="text-sm leading-relaxed text-foreground/80 font-medium whitespace-pre-wrap bg-white/60 p-6 rounded-2xl border border-primary/5 shadow-inner">
-                  {analisisIA.analisis}
-                </div>
-                <div className="grid gap-3">
-                  {analisisIA.recomendaciones.slice(0, 2).map((rec, i) => (
-                    <div key={i} className="text-xs bg-white p-4 rounded-xl border border-primary/5 shadow-sm flex items-start gap-3">
-                      <div className="bg-primary text-primary-foreground h-5 w-5 rounded-lg flex items-center justify-center text-[9px] font-black shrink-0">{i+1}</div>
-                      <span className="font-bold text-foreground/70">{rec}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           <Card className="bg-white border-none shadow-sm overflow-hidden rounded-3xl">
             <CardHeader className="p-8 pb-4">
               <CardTitle className="flex items-center gap-2 text-primary font-black text-lg uppercase tracking-tight">
                 <Users strokeWidth={1.5} className="h-6 w-6" /> Desglose por Colaborador
               </CardTitle>
+              <CardDescription className="text-xs md:text-sm font-medium">Detalle de actividad y materiales manipulados.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-primary/5">
-                {stats.dataArray.slice(0, 6).map((item, idx) => (
+                {stats.dataArray.slice(0, 10).map((item, idx) => (
                   <div key={idx} className="p-6 flex items-center justify-between hover:bg-muted/5 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary font-black text-xs">
@@ -317,4 +235,3 @@ export default function AnalisisPersonalPage() {
     </div>
   )
 }
-
