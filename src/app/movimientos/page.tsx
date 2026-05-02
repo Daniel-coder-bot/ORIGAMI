@@ -54,11 +54,19 @@ export default function MovimientosPage() {
   const articulosRef = useMemoFirebase(() => db ? collection(db, 'articulos') : null, [db])
   const trabajadoresRef = useMemoFirebase(() => db ? collection(db, 'trabajadores') : null, [db])
   
-  const { data: articulos = [] } = useCollection(articulosRef)
-  const { data: trabajadores = [] } = useCollection(trabajadoresRef)
+  const { data: articulosData } = useCollection(articulosRef)
+  const { data: trabajadoresData } = useCollection(trabajadoresRef)
 
-  const articuloSeleccionado = React.useMemo(() => articulos.find((m: any) => m.id === datos.articuloId), [articulos, datos.articuloId])
-  const trabajadorSeleccionado = React.useMemo(() => trabajadores.find((t: any) => t.id === datos.trabajadorId), [trabajadores, datos.trabajadorId])
+  const articulos = articulosData || []
+  const trabajadores = trabajadoresData || []
+
+  const articuloSeleccionado = React.useMemo(() => 
+    articulos.find((m: any) => m.id === datos.articuloId) || null, 
+  [articulos, datos.articuloId])
+
+  const trabajadorSeleccionado = React.useMemo(() => 
+    trabajadores.find((t: any) => t.id === datos.trabajadorId) || null, 
+  [trabajadores, datos.trabajadorId])
 
   const manejarValidacion = (e: React.FormEvent) => {
     e.preventDefault()
@@ -107,7 +115,12 @@ export default function MovimientosPage() {
         })
         .then(() => {
           toast({ title: "Movimiento registrado" })
-          setDatos({ articuloId: '', trabajadorId: user?.role === 'Trabajador' ? user.id : '', cantidad: '', notas: '' })
+          setDatos({ 
+            articuloId: '', 
+            trabajadorId: user?.role === 'Trabajador' ? user.id : '', 
+            cantidad: '', 
+            notas: '' 
+          })
           setIsProcesando(false)
           setIsConfirmOpen(false)
         })
@@ -233,7 +246,7 @@ export default function MovimientosPage() {
           <AlertDialogFooter className="sm:justify-center gap-4 mt-10">
             <AlertDialogCancel disabled={isProcesando} className="h-14 rounded-2xl font-black uppercase tracking-widest px-8">Revisar</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); confirmarMovimiento(); }} disabled={isProcesando} className={`h-14 rounded-2xl font-black uppercase tracking-widest px-10 ${tipo === 'entrada' ? 'bg-primary' : 'bg-accent'}`}>
-              {isProcesando ? <Loader2 className="animate-spin h-5 w-5" /> : 'Confirmar'}
+              {isProcesando ? <CustomLoader className="animate-spin h-5 w-5" /> : 'Confirmar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -242,6 +255,6 @@ export default function MovimientosPage() {
   )
 }
 
-const Loader2 = ({ className }: { className?: string }) => (
+const CustomLoader = ({ className }: { className?: string }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
 )
