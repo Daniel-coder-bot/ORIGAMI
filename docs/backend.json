@@ -46,16 +46,23 @@
       },
       "required": ["nombre", "correo", "rol"]
     },
-    "Alerta": {
-      "title": "Alerta",
-      "description": "Notificaciones de stock bajo u otros eventos.",
+    "Categoria": {
+      "title": "Categoría",
+      "description": "Categoría de clasificación para materiales.",
       "type": "object",
       "properties": {
-        "materialId": { "type": "string" },
-        "mensaje": { "type": "string" },
-        "fecha": { "type": "string", "format": "date-time" },
-        "activa": { "type": "boolean" }
-      }
+        "nombre": { "type": "string" }
+      },
+      "required": ["nombre"]
+    },
+    "Rol": {
+      "title": "Rol",
+      "description": "Cargo o rol para los trabajadores.",
+      "type": "object",
+      "properties": {
+        "nombre": { "type": "string" }
+      },
+      "required": ["nombre"]
     }
   },
   "auth": {
@@ -74,9 +81,13 @@
       "schema": "#/backend/entities/Trabajador",
       "description": "Directorio de personal."
     },
-    "/alertas/{alertaId}": {
-      "schema": "#/backend/entities/Alerta",
-      "description": "Alertas del sistema."
+    "/categorias/{categoriaId}": {
+      "schema": "#/backend/entities/Categoria",
+      "description": "Lista maestra de categorías de inventario."
+    },
+    "/roles/{rolId}": {
+      "schema": "#/backend/entities/Rol",
+      "description": "Lista maestra de roles de personal."
     }
   }
 }

@@ -15,7 +15,8 @@ import {
   ShieldAlert,
   Phone,
   Trash2,
-  Briefcase
+  Briefcase,
+  UserPlus
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,8 +45,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useFirestore, useCollection } from '@/firebase'
 import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { useToast } from '@/hooks/use-toast'
@@ -57,11 +66,16 @@ export default function TrabajadoresPage() {
   const { toast } = useToast()
   const [busqueda, setBusqueda] = useState('')
   const [openDialog, setOpenDialog] = useState(false)
+  const [openRolDialog, setOpenRolDialog] = useState(false)
   const [isEditando, setIsEditando] = useState(false)
+  const [nuevoRol, setNuevoRol] = useState('')
   const [trabajadorSeleccionadoId, setTrabajadorSeleccionadoId] = useState<string | null>(null)
 
   const trabajadoresRef = db ? collection(db, 'trabajadores') : null
+  const rolesRef = db ? collection(db, 'roles') : null
+  
   const { data: trabajadores = [], loading } = useCollection(trabajadoresRef)
+  const { data: rolesList = [] } = useCollection(rolesRef)
 
   const [formTrabajador, setFormTrabajador] = useState({
     nombre: '',
@@ -77,10 +91,19 @@ export default function TrabajadoresPage() {
     t.rol?.toLowerCase().includes(busqueda.toLowerCase())
   )
 
+  const manejarCrearRol = async () => {
+    if (!db || !nuevoRol.trim()) return
+    addDoc(collection(db, 'roles'), { nombre: nuevoRol.trim() }).then(() => {
+      setNuevoRol('')
+      setOpenRolDialog(false)
+      toast({ title: "Rol creado", description: "Cargo registrado exitosamente." })
+    })
+  }
+
   const abrirDialogNuevo = () => {
     setIsEditando(false)
     setTrabajadorSeleccionadoId(null)
-    setFormTrabajador({ nombre: '', correo: '', rol: 'Operario', telefono: '', activo: true })
+    setFormTrabajador({ nombre: '', correo: '', rol: '', telefono: '', activo: true })
     setOpenDialog(true)
   }
 
@@ -99,18 +122,9 @@ export default function TrabajadoresPage() {
 
   const manejarGuardarTrabajador = () => {
     if (!db) return
-
     if (!formTrabajador.nombre || !formTrabajador.correo || !formTrabajador.rol) {
-      toast({ title: "Faltan datos", description: "Nombre, correo y rol son obligatorios.", variant: "destructive" })
+      toast({ title: "Faltan datos", variant: "destructive" })
       return
-    }
-
-    if (!isEditando) {
-      const existe = trabajadores.some((t: any) => t.correo?.toLowerCase() === formTrabajador.correo.toLowerCase())
-      if (existe) {
-        toast({ title: "Correo duplicado", description: "Ya existe un trabajador con este correo electrónico.", variant: "destructive" })
-        return
-      }
     }
 
     const payload = {
@@ -121,19 +135,13 @@ export default function TrabajadoresPage() {
 
     if (isEditando && trabajadorSeleccionadoId) {
       updateDoc(doc(db, 'trabajadores', trabajadorSeleccionadoId), payload)
-        .then(() => {
-          setOpenDialog(false)
-          toast({ title: "Actualizado", description: "Perfil de trabajador actualizado correctamente." })
-        })
+        .then(() => setOpenDialog(false))
         .catch(async (err) => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `trabajadores/${trabajadorSeleccionadoId}`, operation: 'update', requestResourceData: payload }))
         })
     } else {
       addDoc(collection(db, 'trabajadores'), payload)
-        .then(() => {
-          setOpenDialog(false)
-          toast({ title: "Registrado", description: "Nuevo trabajador añadido exitosamente." })
-        })
+        .then(() => setOpenDialog(false))
         .catch(async (err) => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'trabajadores', operation: 'create', requestResourceData: payload }))
         })
@@ -162,176 +170,164 @@ export default function TrabajadoresPage() {
             </div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Gestión de Personal</h1>
           </div>
-          <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Administra los accesos y perfiles de los trabajadores en tiempo real.</p>
+          <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Administra roles y perfiles de usuario en tiempo real.</p>
         </div>
         
-        <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-          <Button onClick={abrirDialogNuevo} className="w-full md:w-auto bg-primary hover:bg-primary/90 shadow-lg font-bold h-12 px-8 rounded-2xl">
-            <Plus strokeWidth={2.5} className="mr-2 h-5 w-5" /> Registrar Trabajador
-          </Button>
-          <DialogContent className="sm:max-w-[500px] w-[95vw] rounded-3xl border-none shadow-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-primary font-bold text-xl">{isEditando ? 'Editar Trabajador' : 'Registrar Trabajador'}</DialogTitle>
-              <DialogDescription className="font-medium text-xs md:text-sm">
-                Completa la información del perfil para guardarla en el sistema.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-5 py-4">
-              <div className="grid gap-2">
-                <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">Nombre Completo</Label>
-                <Input 
-                  value={formTrabajador.nombre}
-                  onChange={(e) => setFormTrabajador({...formTrabajador, nombre: e.target.value})}
-                  className="h-12 rounded-xl border-muted/50 focus:border-primary" 
-                  placeholder="Ej: Juan Pérez"
-                />
+        <div className="flex flex-wrap gap-2">
+          <Dialog open={openRolDialog} onOpenChange={setOpenRolDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="h-12 px-6 rounded-2xl border-primary/20 text-primary font-bold hover:bg-primary/5">
+                <Briefcase strokeWidth={1.5} className="mr-2 h-5 w-5" /> Nuevo Rol
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[400px] rounded-3xl border-none shadow-2xl">
+              <DialogHeader>
+                <DialogTitle className="font-bold">Añadir Rol / Cargo</DialogTitle>
+                <DialogDescription>Crea un nuevo cargo jerárquico para asignar a tu personal.</DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <Label className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground mb-2 block">Nombre del Cargo</Label>
+                <Input value={nuevoRol} onChange={(e) => setNuevoRol(e.target.value)} placeholder="Ej: Supervisor de Planta" className="h-12 rounded-xl" />
               </div>
-              <div className="grid gap-2">
-                <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">Correo Electrónico</Label>
-                <Input 
-                  type="email"
-                  disabled={isEditando}
-                  value={formTrabajador.correo}
-                  onChange={(e) => setFormTrabajador({...formTrabajador, correo: e.target.value})}
-                  className="h-12 rounded-xl border-muted/50 focus:border-primary" 
-                  placeholder="juan@empresa.com"
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <DialogFooter>
+                <Button onClick={manejarCrearRol} className="bg-primary font-bold h-12 w-full rounded-xl">Registrar Cargo</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+            <Button onClick={abrirDialogNuevo} className="w-full md:w-auto bg-primary hover:bg-primary/90 shadow-lg font-bold h-12 px-8 rounded-2xl">
+              <Plus strokeWidth={2.5} className="mr-2 h-5 w-5" /> Registrar Trabajador
+            </Button>
+            <DialogContent className="sm:max-w-[500px] w-[95vw] rounded-[2rem] border-none shadow-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-primary font-bold text-xl">{isEditando ? 'Editar Trabajador' : 'Nuevo Colaborador'}</DialogTitle>
+                <DialogDescription className="font-medium text-xs md:text-sm">Completa el perfil para el control de acceso.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-5 py-4">
                 <div className="grid gap-2">
-                  <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">Rol / Cargo</Label>
-                  <div className="relative">
-                    <Input 
-                      value={formTrabajador.rol}
-                      onChange={(e) => setFormTrabajador({...formTrabajador, rol: e.target.value})}
-                      className="h-12 rounded-xl border-muted/50 focus:border-primary pl-10" 
-                      placeholder="Ej: Operario, Jefe..."
-                    />
-                    <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">NOMBRE COMPLETO</Label>
+                  <Input value={formTrabajador.nombre} onChange={(e) => setFormTrabajador({...formTrabajador, nombre: e.target.value})} className="h-12 rounded-xl" placeholder="Ej: Roberto Sánchez" />
+                </div>
+                <div className="grid gap-2">
+                  <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">CORREO CORPORATIVO</Label>
+                  <Input type="email" disabled={isEditando} value={formTrabajador.correo} onChange={(e) => setFormTrabajador({...formTrabajador, correo: e.target.value})} className="h-12 rounded-xl" placeholder="email@empresa.com" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">CARGO / ROL</Label>
+                    <Select value={formTrabajador.rol} onValueChange={(val) => setFormTrabajador({...formTrabajador, rol: val})}>
+                      <SelectTrigger className="h-12 rounded-xl">
+                        <SelectValue placeholder="Seleccionar rol..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {rolesList.map((rol: any) => (
+                          <SelectItem key={rol.id} value={rol.nombre}>{rol.nombre}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">TELÉFONO</Label>
+                    <Input value={formTrabajador.telefono} onChange={(e) => setFormTrabajador({...formTrabajador, telefono: e.target.value})} className="h-12 rounded-xl" placeholder="+54 11..." />
                   </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">Teléfono</Label>
-                  <Input 
-                    value={formTrabajador.telefono}
-                    onChange={(e) => setFormTrabajador({...formTrabajador, telefono: e.target.value})}
-                    className="h-12 rounded-xl border-muted/50 focus:border-primary" 
-                    placeholder="+54 11..."
-                  />
-                </div>
               </div>
-            </div>
-            <DialogFooter className="gap-2">
-              <Button variant="ghost" onClick={() => setOpenDialog(false)} className="h-12 font-bold rounded-xl">Cancelar</Button>
-              <Button onClick={manejarGuardarTrabajador} className="bg-primary font-bold h-12 px-10 rounded-xl shadow-lg">Guardar Registro</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter className="gap-2">
+                <Button variant="ghost" onClick={() => setOpenDialog(false)} className="h-12 font-bold rounded-xl">Cancelar</Button>
+                <Button onClick={manejarGuardarTrabajador} className="bg-primary font-bold h-12 px-10 rounded-xl shadow-lg">Guardar Registro</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      <Card className="border-none shadow-sm overflow-hidden bg-white rounded-3xl">
-        <CardContent className="p-4 md:p-8">
-          <div className="flex items-center bg-muted/30 rounded-2xl px-5 py-3 mb-8 w-full md:max-w-md border-none focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-            <Search strokeWidth={1.5} className="h-4 w-4 text-muted-foreground mr-3 flex-shrink-0" />
-            <Input 
-              placeholder="Buscar por nombre, correo o rol..." 
-              className="border-none bg-transparent focus-visible:ring-0 h-8 text-sm w-full font-medium"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-          </div>
+      <div className="relative w-full md:max-w-md">
+        <Search strokeWidth={1.5} className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input placeholder="Buscar por nombre, correo o cargo..." className="pl-12 h-14 rounded-2xl bg-white border-none shadow-sm font-medium w-full" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+      </div>
 
-          <div className="rounded-3xl border border-muted/30 overflow-hidden bg-white">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow className="hover:bg-transparent border-none">
-                    <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground py-5 px-8">Trabajador</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Rol / Cargo</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Estado</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground hidden sm:table-cell">Contacto</TableHead>
-                    <TableHead className="text-right font-bold text-[10px] uppercase tracking-widest text-muted-foreground pr-8">Acciones</TableHead>
+      <Card className="border-none shadow-sm overflow-hidden bg-white rounded-[2rem]">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-muted/30">
+                <TableRow className="border-none">
+                  <TableHead className="font-black text-[10px] uppercase tracking-widest text-muted-foreground py-6 px-10">TRABAJADOR</TableHead>
+                  <TableHead className="font-black text-[10px] uppercase tracking-widest text-muted-foreground">CARGO</TableHead>
+                  <TableHead className="font-black text-[10px] uppercase tracking-widest text-muted-foreground">ESTADO</TableHead>
+                  <TableHead className="font-black text-[10px] uppercase tracking-widest text-muted-foreground hidden sm:table-cell">CONTACTO</TableHead>
+                  <TableHead className="text-right font-black text-[10px] uppercase tracking-widest text-muted-foreground pr-10">ACCIONES</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow><TableCell colSpan={5} className="h-48 text-center font-black text-muted-foreground animate-pulse uppercase tracking-tighter">Sincronizando equipo...</TableCell></TableRow>
+                ) : filtrados.map((t: any) => (
+                  <TableRow key={t.id} className="hover:bg-primary/5 transition-colors border-muted/20">
+                    <TableCell className="py-6 px-10">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary shadow-inner">
+                          <UserRound strokeWidth={1.5} className="h-6 w-6" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-sm text-foreground">{t.nombre}</span>
+                          <span className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter">{t.correo}</span>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-black px-3 py-1 text-[10px] rounded-full border-primary/20 text-primary bg-primary/5">
+                        <Shield strokeWidth={1.5} className="mr-1.5 h-3 w-3" /> {t.rol}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <button onClick={() => toggleEstado(t)} className="transition-transform active:scale-95">
+                        {t.activo ? (
+                          <span className="flex items-center gap-1.5 text-green-600 font-black text-[9px] bg-green-50 px-3 py-1.5 rounded-full uppercase tracking-tighter">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Activo
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1.5 text-red-500 font-black text-[9px] bg-red-50 px-3 py-1.5 rounded-full uppercase tracking-tighter">
+                            <XCircle className="h-3.5 w-3.5" /> Suspendido
+                          </span>
+                        )}
+                      </button>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground font-bold text-[10px] hidden sm:table-cell">{t.telefono || '---'}</TableCell>
+                    <TableCell className="text-right pr-10">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-10 w-10 p-0 rounded-full hover:bg-muted/50">
+                            <MoreHorizontal className="h-5 w-5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 rounded-2xl border-none shadow-2xl p-2 bg-white">
+                          <DropdownMenuLabel className="text-[10px] font-black uppercase text-muted-foreground px-3 py-2">Administrar</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => abrirDialogEditar(t)} className="text-xs font-bold rounded-xl px-3 py-3 hover:bg-primary/10 cursor-pointer">
+                            <PenLine strokeWidth={1.5} className="h-4 w-4 mr-2 text-primary" /> Editar Perfil
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => toggleEstado(t)} className="text-xs font-bold rounded-xl px-3 py-3 hover:bg-accent/10 cursor-pointer">
+                            <ShieldAlert strokeWidth={1.5} className="h-4 w-4 mr-2 text-accent" /> {t.activo ? 'Inhabilitar' : 'Habilitar'}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="my-1.5 bg-muted/30" />
+                          <DropdownMenuItem onClick={() => eliminarTrabajador(t.id)} className="text-destructive text-xs font-bold rounded-xl px-3 py-3 hover:bg-red-50 cursor-pointer">
+                            <Trash2 strokeWidth={1.5} className="h-4 w-4 mr-2" /> Eliminar Permanente
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow><TableCell colSpan={5} className="h-48 text-center animate-pulse font-bold text-muted-foreground">Sincronizando equipo...</TableCell></TableRow>
-                  ) : filtrados.map((t: any) => (
-                    <TableRow key={t.id} className="hover:bg-primary/5 transition-colors border-muted/20">
-                      <TableCell className="py-5 px-8">
-                        <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary flex-shrink-0 shadow-inner group-hover:bg-primary group-hover:text-white transition-colors duration-300">
-                            <UserRound strokeWidth={1.5} className="h-6 w-6" />
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-bold text-sm truncate text-foreground">{t.nombre}</span>
-                            <span className="text-[10px] text-muted-foreground flex items-center gap-1.5 font-medium truncate uppercase tracking-tighter">
-                              <Mail strokeWidth={1.5} className="h-3 w-3 flex-shrink-0" /> {t.correo}
-                            </span>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize font-black px-3 py-1 text-[10px] rounded-full border-primary/20 text-primary bg-primary/5">
-                          <Shield strokeWidth={1.5} className="mr-1.5 h-3 w-3" />
-                          {t.rol}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <button onClick={() => toggleEstado(t)} className="transition-transform active:scale-95">
-                          {t.activo ? (
-                            <span className="flex items-center gap-1.5 text-green-600 font-black text-[9px] whitespace-nowrap bg-green-50 px-2.5 py-1.5 rounded-full w-fit uppercase tracking-tighter">
-                              <CheckCircle2 strokeWidth={2} className="h-3.5 w-3.5" /> Activo
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1.5 text-red-500 font-black text-[9px] whitespace-nowrap bg-red-50 px-2.5 py-1.5 rounded-full w-fit uppercase tracking-tighter">
-                              <XCircle strokeWidth={2} className="h-3.5 w-3.5" /> Inactivo
-                            </span>
-                          )}
-                        </button>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground font-bold text-[10px] hidden sm:table-cell whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                           <Phone strokeWidth={1.5} className="h-3.5 w-3.5" /> {t.telefono || 'Sin tel.'}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right pr-8">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-10 w-10 p-0 rounded-full hover:bg-muted/50">
-                              <MoreHorizontal strokeWidth={1.5} className="h-5 w-5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56 rounded-2xl border-none shadow-2xl p-2 bg-white">
-                            <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-3 py-2">Gestión de Perfil</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => abrirDialogEditar(t)} className="text-xs font-bold rounded-xl cursor-pointer flex gap-3 items-center px-3 py-3 hover:bg-primary/10 transition-colors">
-                              <PenLine strokeWidth={1.5} className="h-4 w-4 text-primary" /> Editar Datos
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => toggleEstado(t)} className="text-xs font-bold rounded-xl cursor-pointer flex gap-3 items-center px-3 py-3 hover:bg-accent/10 transition-colors">
-                              <ShieldAlert strokeWidth={1.5} className="h-4 w-4 text-accent" /> {t.activo ? 'Suspender Acceso' : 'Restaurar Acceso'}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator className="my-1.5 bg-muted/30" />
-                            <DropdownMenuItem onClick={() => eliminarTrabajador(t.id)} className="text-destructive text-xs font-bold rounded-xl cursor-pointer flex gap-3 items-center px-3 py-3 hover:bg-red-50 transition-colors">
-                              <Trash2 strokeWidth={1.5} className="h-4 w-4" /> Eliminar Permanentemente
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {!loading && filtrados.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="h-48 text-center text-muted-foreground font-black">
-                        <div className="flex flex-col items-center gap-3 opacity-30">
-                          <UserRound strokeWidth={1} className="h-16 w-16" />
-                          NO SE ENCONTRARON RESULTADOS
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                ))}
+                {!loading && filtrados.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-48 text-center text-muted-foreground font-black opacity-30 uppercase text-[10px] tracking-widest">
+                      <UserRound strokeWidth={1} className="h-16 w-16 mx-auto mb-2" /> No se encontraron resultados
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
