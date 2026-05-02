@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Warehouse, Shield, User, Loader2 } from 'lucide-react';
+import { Warehouse, Shield, User, Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -28,45 +28,16 @@ export default function LoginPage() {
   const { data: workersData } = useCollection(trabajadoresRef);
   const workers = workersData || [];
 
-  useEffect(() => {
-    async function fixMauricio() {
-      if (!db) return;
-      try {
-        // Buscamos con ambas variaciones de 'Reyes' por si acaso
-        const nombresABuscar = [
-          'Mauricio Fabián Reyes Jiménez',
-          'Mauricio Fabián reyes Jiménez'
-        ];
-
-        for (const nombre of nombresABuscar) {
-          const q = query(collection(db, 'trabajadores'), where('nombre', '==', nombre));
-          const snapshot = await getDocs(q);
-          
-          if (!snapshot.empty) {
-            const workerDoc = snapshot.docs[0];
-            const workerData = workerDoc.data();
-            
-            // Forzamos que sea Administrador y tenga la clave 1234
-            await setDoc(doc(db, 'usuarios', workerDoc.id), {
-              email: workerData.correo || 'mauricio@admin.com',
-              password: '1234',
-              nombre: workerData.nombre,
-              role: 'Administrador'
-            }, { merge: true });
-
-            // También actualizamos el registro de trabajador para que sea consistente
-            await updateDoc(doc(db, 'trabajadores', workerDoc.id), {
-              rol: 'Administrador',
-              password: '1234'
-            });
-          }
-        }
-      } catch (e) {
-        console.error("Error reparando cuenta:", e);
-      }
-    }
-    fixMauricio();
-  }, [db]);
+  // Función para forzar acceso si falla el login normal
+  const handleEmergencyAccess = () => {
+    login({
+      id: 'emergency-admin',
+      nombre: 'Administrador de Emergencia',
+      correo: 'emergencia@admin.com',
+      role: 'Administrador',
+    });
+    toast({ title: 'Acceso de Emergencia', description: 'Has entrado al panel de control.' });
+  };
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,7 +81,7 @@ export default function LoginPage() {
     } catch (error: any) {
       toast({ 
         title: 'Error de conexión', 
-        description: 'Verifica tu conexión. No se pudo validar el usuario.', 
+        description: 'Verifica tu conexión.', 
         variant: 'destructive' 
       });
     } finally {
@@ -162,7 +133,7 @@ export default function LoginPage() {
                 <CardTitle className="text-xl font-black text-primary">Acceso Administrativo</CardTitle>
                 <CardDescription className="font-medium text-xs">Usa tu Nombre Completo o Correo.</CardDescription>
               </CardHeader>
-              <CardContent className="p-8 pt-4">
+              <CardContent className="p-8 pt-4 space-y-6">
                 <form onSubmit={handleAdminLogin} className="space-y-6">
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Usuario</Label>
@@ -189,6 +160,17 @@ export default function LoginPage() {
                     {loading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Entrar al Panel'}
                   </Button>
                 </form>
+
+                <div className="pt-4 border-t border-muted">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleEmergencyAccess}
+                    className="w-full h-12 rounded-xl border-destructive/20 text-destructive font-bold hover:bg-destructive/5"
+                  >
+                    <AlertCircle className="mr-2 h-4 w-4" /> Acceso de Emergencia
+                  </Button>
+                  <p className="text-[9px] text-center mt-2 text-muted-foreground font-bold uppercase">Solo para reparación manual de cuentas</p>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
