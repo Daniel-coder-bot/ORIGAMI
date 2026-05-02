@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, updateDoc, or } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,8 +20,7 @@ export default function LoginPage() {
   const db = useFirestore();
   const [loading, setLoading] = useState(false);
 
-  // Form states
-  const [identifier, setIdentifier] = useState(''); // Puede ser correo o nombre
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [workerId, setWorkerId] = useState('');
 
@@ -29,7 +28,6 @@ export default function LoginPage() {
   const { data: workersData } = useCollection(trabajadoresRef);
   const workers = workersData || [];
 
-  // Función de recuperación para Mauricio Fabián reyes Jiménez
   useEffect(() => {
     async function fixMauricio() {
       if (!db) return;
@@ -42,20 +40,22 @@ export default function LoginPage() {
           const workerData = workerDoc.data();
           
           if (workerData.rol === 'Administrador' || workerData.rol === 'Gestor de Proyecto') {
-            await setDoc(doc(db, 'usuarios', workerDoc.id), {
+            setDoc(doc(db, 'usuarios', workerDoc.id), {
               email: workerData.correo,
-              password: '1234',
+              password: workerData.password || '1234',
               nombre: workerData.nombre,
               role: workerData.rol
             }, { merge: true });
 
-            await updateDoc(doc(db, 'trabajadores', workerDoc.id), {
-              password: '1234'
-            });
+            if (!workerData.password) {
+              updateDoc(doc(db, 'trabajadores', workerDoc.id), {
+                password: '1234'
+              });
+            }
           }
         }
       } catch (e) {
-        // Error silencioso en recuperación
+        // Error silencioso
       }
     }
     fixMauricio();
@@ -63,18 +63,30 @@ export default function LoginPage() {
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db) return;
+    if (!db) {
+      toast({ title: 'Error', description: 'El sistema no está listo. Reintenta en un momento.', variant: 'destructive' });
+      return;
+    }
     setLoading(true);
 
     try {
-      // Buscamos por email O por nombre exacto
-      const q = query(
+      // Intento 1: Buscar por correo
+      let q = query(
         collection(db, 'usuarios'), 
-        or(where('email', '==', identifier), where('nombre', '==', identifier)),
+        where('email', '==', identifier),
         where('password', '==', password)
       );
-      
-      const snapshot = await getDocs(q);
+      let snapshot = await getDocs(q);
+
+      // Intento 2: Buscar por nombre si el primero falló
+      if (snapshot.empty) {
+        q = query(
+          collection(db, 'usuarios'), 
+          where('nombre', '==', identifier),
+          where('password', '==', password)
+        );
+        snapshot = await getDocs(q);
+      }
 
       if (!snapshot.empty) {
         const userData = snapshot.docs[0].data();
@@ -86,10 +98,14 @@ export default function LoginPage() {
         });
         toast({ title: 'Bienvenido', description: `Sesión iniciada como ${userData.role}` });
       } else {
-        toast({ title: 'Error de acceso', description: 'Credenciales inválidas.', variant: 'destructive' });
+        toast({ title: 'Acceso denegado', description: 'Usuario o contraseña incorrectos.', variant: 'destructive' });
       }
-    } catch (error) {
-      toast({ title: 'Error', description: 'No se pudo conectar con el servidor.', variant: 'destructive' });
+    } catch (error: any) {
+      toast({ 
+        title: 'Error de conexión', 
+        description: error.message || 'No se pudo conectar con el servidor. Verifica tu internet.', 
+        variant: 'destructive' 
+      });
     } finally {
       setLoading(false);
     }
@@ -137,14 +153,14 @@ export default function LoginPage() {
             <Card className="border-none shadow-2xl bg-white rounded-[2rem] overflow-hidden mt-4">
               <CardHeader className="p-8 pb-4">
                 <CardTitle className="text-xl font-black text-primary">Acceso Administrativo</CardTitle>
-                <CardDescription className="font-medium">Usa tu correo o nombre completo.</CardDescription>
+                <CardDescription className="font-medium">Nombre completo o correo.</CardDescription>
               </CardHeader>
               <CardContent className="p-8 pt-4">
                 <form onSubmit={handleAdminLogin} className="space-y-6">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Usuario (Nombre o Correo)</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Usuario</Label>
                     <Input 
-                      placeholder="Nombre o email@empresa.com" 
+                      placeholder="Nombre o Correo" 
                       className="h-12 rounded-xl font-bold"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
@@ -174,7 +190,7 @@ export default function LoginPage() {
             <Card className="border-none shadow-2xl bg-white rounded-[2rem] overflow-hidden mt-4">
               <CardHeader className="p-8 pb-4">
                 <CardTitle className="text-xl font-black text-primary">Acceso de Operario</CardTitle>
-                <CardDescription className="font-medium">Selecciona tu nombre de la lista.</CardDescription>
+                <CardDescription className="font-medium">Busca tu nombre en la lista.</CardDescription>
               </CardHeader>
               <CardContent className="p-8 pt-4">
                 <div className="space-y-6">
@@ -199,10 +215,6 @@ export default function LoginPage() {
             </Card>
           </TabsContent>
         </Tabs>
-        
-        <p className="text-center text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-50">
-          © 2024 Gestor Stock Enterprise
-        </p>
       </div>
     </div>
   );
