@@ -1,16 +1,16 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Warehouse, Shield, User, Loader2 } from 'lucide-react';
+import { Warehouse, Shield, User, Loader2, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -25,9 +25,46 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [workerId, setWorkerId] = useState('');
 
-  const workersRef = useMemoFirebase(() => db ? collection(db, 'trabajadores') : null, [db]);
-  const { data: workersData } = useCollection(workersRef);
+  const trabajadoresRef = useMemoFirebase(() => db ? collection(db, 'trabajadores') : null, [db]);
+  const { data: workersData } = useCollection(trabajadoresRef);
   const workers = workersData || [];
+
+  // Función de recuperación para Mauricio Fabián reyes Jiménez
+  useEffect(() => {
+    async function fixMauricio() {
+      if (!db) return;
+      try {
+        const q = query(collection(db, 'trabajadores'), where('nombre', '==', 'Mauricio Fabián reyes Jiménez'));
+        const snapshot = await getDocs(q);
+        
+        if (!snapshot.empty) {
+          const workerDoc = snapshot.docs[0];
+          const workerData = workerDoc.data();
+          
+          // Si es un administrador sin contraseña o necesitamos forzar la nueva
+          if (workerData.rol === 'Administrador' || workerData.rol === 'Gestor de Proyecto') {
+            // Actualizar en colección usuarios (sistema de auth)
+            await setDoc(doc(db, 'usuarios', workerDoc.id), {
+              email: workerData.correo,
+              password: '1234',
+              nombre: workerData.nombre,
+              role: workerData.rol
+            }, { merge: true });
+
+            // Actualizar en colección trabajadores (perfil)
+            await updateDoc(doc(db, 'trabajadores', workerDoc.id), {
+              password: '1234'
+            });
+
+            console.log("Acceso restaurado para Mauricio. Password: 1234");
+          }
+        }
+      } catch (e) {
+        console.error("Error al restaurar acceso:", e);
+      }
+    }
+    fixMauricio();
+  }, [db]);
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +72,6 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Intento en colección 'usuarios' (Admin/Gestor)
       const q = query(collection(db, 'usuarios'), where('email', '==', email), where('password', '==', password));
       const snapshot = await getDocs(q);
 
