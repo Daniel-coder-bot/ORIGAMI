@@ -65,19 +65,17 @@ export default function TrabajadoresPage() {
   const { toast } = useToast()
   const [busqueda, setBusqueda] = useState('')
   const [openDialog, setOpenDialog] = useState(false)
-  const [openRolDialog, setOpenRolDialog] = useState(false)
   const [isEditando, setIsEditando] = useState(false)
-  const [nuevoRol, setNuevoRol] = useState('')
   const [trabajadorSeleccionadoId, setTrabajadorSeleccionadoId] = useState<string | null>(null)
   
-  const [rolEditandoId, setRolEditandoId] = useState<string | null>(null)
-  const [nombreRolEdit, setNombreRolEdit] = useState('')
-
   const trabajadoresRef = useMemoFirebase(() => db ? collection(db, 'trabajadores') : null, [db])
   const rolesRef = useMemoFirebase(() => db ? collection(db, 'roles') : null, [db])
   
-  const { data: trabajadores = [], loading } = useCollection(trabajadoresRef)
-  const { data: roles = [] } = useCollection(rolesRef)
+  const { data: trabajadoresData, loading } = useCollection(trabajadoresRef)
+  const { data: rolesData } = useCollection(rolesRef)
+
+  const trabajadores = trabajadoresData || []
+  const roles = rolesData || []
 
   const [formTrabajador, setFormTrabajador] = useState({
     nombre: '',
@@ -89,19 +87,13 @@ export default function TrabajadoresPage() {
   })
 
   const filtrados = useMemo(() => {
+    if (!trabajadores) return []
     return trabajadores.filter((t: any) => 
       t.nombre?.toLowerCase().includes(busqueda.toLowerCase()) || 
       t.correo?.toLowerCase().includes(busqueda.toLowerCase()) ||
       t.rol?.toLowerCase().includes(busqueda.toLowerCase())
     )
   }, [trabajadores, busqueda])
-
-  const manejarCrearRol = () => {
-    if (!db || !nuevoRol.trim()) return
-    addDocumentNonBlocking(collection(db, 'roles'), { nombre: nuevoRol.trim() });
-    setNuevoRol('')
-    toast({ title: "Rol creado" })
-  }
 
   const manejarGuardarTrabajador = () => {
     if (!db) return
