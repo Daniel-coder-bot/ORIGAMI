@@ -19,7 +19,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/table"
+} from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { 
   DropdownMenu,
@@ -47,7 +47,7 @@ export default function HistorialPage() {
   const movimientos = movimientosData || []
 
   const filtrados = useMemo(() => {
-    let result = movimientos.filter((h: any) => 
+    let result = (movimientos || []).filter((h: any) => 
       h.articuloNombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
       h.trabajadorNombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
       h.tipo?.toLowerCase().includes(busqueda.toLowerCase())
@@ -138,7 +138,7 @@ export default function HistorialPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow><TableCell colSpan={5} className="h-40 text-center animate-pulse font-black text-xs uppercase tracking-widest">Sincronizando registros...</TableCell></TableRow>
-                  ) : filtrados.length > 0 ? filtrados.map((mov: any) => (
+                  ) : (filtrados || []).length > 0 ? filtrados.map((mov: any) => (
                     <TableRow key={mov.id} className="hover:bg-primary/5 border-muted/20">
                       <TableCell className="px-6 md:px-8 py-6">
                         <div className="flex items-center gap-3">
