@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { ArrowUpRight, ArrowDownRight, History, CheckCircle2, User, Search, Box } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, History, CheckCircle2, User, Search, Box, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from "@/components/ui/label"
@@ -32,7 +32,7 @@ import { cn } from '@/lib/utils'
 export default function MovimientosPage() {
   const db = useFirestore()
   const { toast } = useToast()
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const [tipo, setTipo] = useState<'entrada' | 'salida'>('entrada')
   
   const [busquedaArticulo, setBusquedaArticulo] = useState('')
@@ -169,14 +169,27 @@ export default function MovimientosPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 md:space-y-8 animate-in fade-in duration-500">
-      <div className="space-y-1">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-2xl bg-primary/10">
-            <History strokeWidth={1.5} className="h-6 w-6 text-primary" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-primary/10">
+              <History strokeWidth={1.5} className="h-6 w-6 text-primary" />
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Operaciones</h1>
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Operaciones de Inventario</h1>
+          <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest pl-14">Registro de entradas y salidas</p>
         </div>
-        <p className="text-xs font-bold text-muted-foreground pl-14">Registro oficial de entradas y salidas de almacén.</p>
+        
+        {/* Botón de Terminar Turno para Trabajadores */}
+        {user?.role === 'Trabajador' && (
+          <Button 
+            onClick={logout} 
+            variant="destructive" 
+            className="h-12 px-6 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-destructive/20 active:scale-95 transition-transform"
+          >
+            <LogOut className="mr-2 h-5 w-5" /> Terminar Turno
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -289,7 +302,7 @@ export default function MovimientosPage() {
                         className="h-14 rounded-2xl font-bold"
                         value={trabajadorSeleccionado?.nombre || ""}
                         readOnly
-                        onClick={() => {/* Podría añadirse búsqueda dinámica también aquí */}}
+                        onClick={() => {}}
                       />
                       <select 
                         className="absolute inset-0 opacity-0 cursor-pointer h-full w-full"
@@ -303,7 +316,6 @@ export default function MovimientosPage() {
                       </select>
                     </div>
                   )}
-                  {user?.role === 'Trabajador' && <p className="text-[10px] font-bold text-primary/60 italic px-1">Tu usuario ha sido asignado automáticamente.</p>}
                 </div>
 
                 <div className="space-y-3">
@@ -335,7 +347,7 @@ export default function MovimientosPage() {
             <div className="pt-6 border-t border-primary/5 flex flex-col md:flex-row items-center justify-between gap-6">
                <div className="flex items-center gap-4 text-muted-foreground">
                   <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Sincronización en tiempo real activa</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-center">Sincronización en tiempo real activa</span>
                </div>
                <Button 
                 type="submit" 

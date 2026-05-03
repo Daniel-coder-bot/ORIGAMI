@@ -41,7 +41,6 @@ export default function LoginPage() {
           const docRef = snap.docs[0].ref;
           const data = snap.docs[0].data();
           
-          // Asegurar que Mauricio tenga el rol Admin y la contraseña 1234
           await setDoc(doc(db, 'usuarios', docRef.id), {
             email: data.correo || 'mauricio@admin.com',
             password: '1234',
@@ -63,7 +62,6 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Intento por Correo
       let q = query(
         collection(db, 'usuarios'), 
         where('email', '==', identifier),
@@ -71,7 +69,6 @@ export default function LoginPage() {
       );
       let snapshot = await getDocs(q);
 
-      // Intento por Nombre
       if (snapshot.empty) {
         q = query(
           collection(db, 'usuarios'), 
@@ -140,16 +137,16 @@ export default function LoginPage() {
 
           <TabsContent value="admin">
             <Card className="border-none shadow-2xl bg-white rounded-[2rem] overflow-hidden mt-4">
-              <CardHeader className="p-8 pb-4">
-                <CardTitle className="text-xl font-black text-primary">Acceso Administrativo</CardTitle>
-                <CardDescription className="font-medium text-xs">Ingresa tu Nombre Completo o Correo.</CardDescription>
+              <CardHeader className="p-8 pb-4 text-center">
+                <CardTitle className="text-xl font-black text-primary">Acceso Gestión</CardTitle>
+                <CardDescription className="font-medium text-[10px] uppercase tracking-wider">Entrada para Administradores</CardDescription>
               </CardHeader>
               <CardContent className="p-8 pt-4 space-y-6">
                 <form onSubmit={handleAdminLogin} className="space-y-6">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Usuario (Nombre o Correo)</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Usuario</Label>
                     <Input 
-                      placeholder="Ej: Juan Pérez o correo@ejemplo.com" 
+                      placeholder="Nombre o Correo" 
                       className="h-12 rounded-xl font-bold"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
@@ -177,14 +174,14 @@ export default function LoginPage() {
 
           <TabsContent value="worker">
             <Card className="border-none shadow-2xl bg-white rounded-[2rem] overflow-hidden mt-4">
-              <CardHeader className="p-8 pb-4">
-                <CardTitle className="text-xl font-black text-primary">Acceso de Operario</CardTitle>
-                <CardDescription className="font-medium text-xs">Busca tu nombre en la lista.</CardDescription>
+              <CardHeader className="p-8 pb-4 text-center">
+                <CardTitle className="text-xl font-black text-primary">Acceso Personal</CardTitle>
+                <CardDescription className="font-medium text-[10px] uppercase tracking-wider">Entrada para Operarios</CardDescription>
               </CardHeader>
               <CardContent className="p-8 pt-4">
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Trabajador</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Selecciona tu Nombre</Label>
                     <Select value={workerId} onValueChange={setWorkerId}>
                       <SelectTrigger className="h-14 rounded-2xl font-bold">
                         <SelectValue placeholder="¿Quién eres?" />
