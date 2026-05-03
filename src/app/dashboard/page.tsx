@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useMemo } from 'react'
@@ -96,60 +95,66 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-none bg-white shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Artículos Totales</CardTitle>
-            <div className="p-1.5 rounded-lg bg-primary/5 text-primary">
-              <Box strokeWidth={1.5} className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl md:text-3xl font-black">{loadingArt ? "..." : stats.totalArticulos}</div>
-            <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Catálogo en sistema</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-none bg-white shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Existencias</CardTitle>
-            <div className="p-1.5 rounded-lg bg-accent/5 text-accent">
-              <Activity strokeWidth={1.5} className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl md:text-3xl font-black">{loadingArt ? "..." : stats.totalStock}</div>
-            <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Unidades totales</p>
-          </CardContent>
-        </Card>
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 px-1">
+          <Activity className="h-4 w-4 text-primary/60" />
+          <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Indicadores</h2>
+        </div>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="border-none bg-white shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Artículos Totales</CardTitle>
+              <div className="p-1.5 rounded-lg bg-primary/5 text-primary">
+                <Box strokeWidth={1.5} className="h-4 w-4" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl md:text-3xl font-black">{loadingArt ? "..." : stats.totalArticulos}</div>
+              <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Catálogo en sistema</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-none bg-white shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Existencias</CardTitle>
+              <div className="p-1.5 rounded-lg bg-accent/5 text-accent">
+                <Activity strokeWidth={1.5} className="h-4 w-4" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl md:text-3xl font-black">{loadingArt ? "..." : stats.totalStock}</div>
+              <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Unidades totales</p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-none bg-white shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Alertas Stock</CardTitle>
-            <div className={`p-1.5 rounded-lg ${stats.bajoStockCount > 0 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
-              <AlertTriangle strokeWidth={1.5} className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl md:text-3xl font-black ${stats.bajoStockCount > 0 ? 'text-red-600' : 'text-green-600'}`}>
-              {stats.bajoStockCount}
-            </div>
-            <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Reponer pronto</p>
-          </CardContent>
-        </Card>
+          <Card className="border-none bg-white shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Alertas Stock</CardTitle>
+              <div className={`p-1.5 rounded-lg ${stats.bajoStockCount > 0 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                <AlertTriangle strokeWidth={1.5} className="h-4 w-4" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl md:text-3xl font-black ${stats.bajoStockCount > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                {stats.bajoStockCount}
+              </div>
+              <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Reponer pronto</p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-none bg-white shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Movimientos</CardTitle>
-            <div className="p-1.5 rounded-lg bg-primary/5 text-primary">
-              <Clock strokeWidth={1.5} className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl md:text-3xl font-black">{movimientos.length}</div>
-            <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Recientes</p>
-          </CardContent>
-        </Card>
+          <Card className="border-none bg-white shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Movimientos</CardTitle>
+              <div className="p-1.5 rounded-lg bg-primary/5 text-primary">
+                <Clock strokeWidth={1.5} className="h-4 w-4" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl md:text-3xl font-black">{movimientos.length}</div>
+              <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Recientes</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-7">
