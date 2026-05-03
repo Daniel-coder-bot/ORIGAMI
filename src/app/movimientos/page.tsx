@@ -180,7 +180,6 @@ export default function MovimientosPage() {
           <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest pl-14">Registro de entradas y salidas</p>
         </div>
         
-        {/* Botón de Terminar Turno para Trabajadores */}
         {user?.role === 'Trabajador' && (
           <Button 
             onClick={logout} 
@@ -223,7 +222,6 @@ export default function MovimientosPage() {
           <form onSubmit={manejarValidacion} className="space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div className="space-y-8">
-                {/* Selector Dinámico de Artículo */}
                 <div className="space-y-3">
                   <Label className="font-black text-[11px] uppercase tracking-widest text-muted-foreground">Material / Artículo</Label>
                   <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>

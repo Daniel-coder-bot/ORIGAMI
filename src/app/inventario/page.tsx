@@ -93,7 +93,7 @@ export default function InventarioPage() {
     addDoc(collection(db, 'categorias'), { nombre: nuevaCategoria.trim() }).then(() => {
       setNuevaCategoria('')
       toast({ title: "Categoría creada" })
-      setTimeout(() => window.location.reload(), 500)
+      setTimeout(() => window.location.reload(), 800)
     })
   }
 
@@ -108,7 +108,7 @@ export default function InventarioPage() {
       setCatEditandoId(null)
       setNombreCatEdit('')
       toast({ title: "Categoría actualizada" })
-      setTimeout(() => window.location.reload(), 500)
+      setTimeout(() => window.location.reload(), 800)
     })
   }
 
@@ -116,7 +116,7 @@ export default function InventarioPage() {
     if (!db) return
     deleteDoc(doc(db, 'categorias', id)).then(() => {
       toast({ title: "Categoría eliminada" })
-      setTimeout(() => window.location.reload(), 500)
+      setTimeout(() => window.location.reload(), 800)
     })
   }
 
@@ -142,7 +142,7 @@ export default function InventarioPage() {
           setEditandoId(null)
           resetForm()
           toast({ title: "Artículo actualizado" })
-          setTimeout(() => window.location.reload(), 800)
+          setTimeout(() => window.location.reload(), 1000)
         })
         .catch(async (err) => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `articulos/${editandoId}`, operation: 'update', requestResourceData: data }))
@@ -155,7 +155,7 @@ export default function InventarioPage() {
         setOpenDialog(false)
         resetForm()
         toast({ title: "Artículo registrado" })
-        setTimeout(() => window.location.reload(), 800)
+        setTimeout(() => window.location.reload(), 1000)
       }).catch(async (err) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'articulos', operation: 'create', requestResourceData: data }))
       })
@@ -185,7 +185,7 @@ export default function InventarioPage() {
     deleteDoc(doc(db, 'articulos', id))
       .then(() => {
         toast({ title: "Artículo eliminado" })
-        setTimeout(() => window.location.reload(), 500)
+        setTimeout(() => window.location.reload(), 1000)
       })
       .catch(async (err) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `articulos/${id}`, operation: 'delete' }))
