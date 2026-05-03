@@ -100,7 +100,6 @@ export default function TrabajadoresPage() {
     addDoc(collection(db, 'roles'), { nombre: nuevoCargo.trim() }).then(() => {
       setNuevoCargo('')
       toast({ title: "Cargo creado" })
-      setTimeout(() => window.location.reload(), 500)
     })
   }
 
@@ -116,7 +115,6 @@ export default function TrabajadoresPage() {
       setCargoEditandoId(null)
       setNombreCargoEdit('')
       toast({ title: "Cargo actualizado" })
-      setTimeout(() => window.location.reload(), 500)
     })
   }
 
@@ -124,7 +122,6 @@ export default function TrabajadoresPage() {
     if (!db || PROTECTED_ROLES.includes(nombre)) return
     deleteDoc(doc(db, 'roles', id)).then(() => {
       toast({ title: "Cargo eliminado" })
-      setTimeout(() => window.location.reload(), 500)
     })
   }
 
@@ -144,6 +141,7 @@ export default function TrabajadoresPage() {
       const docRef = doc(db, 'trabajadores', trabajadorSeleccionadoId)
       updateDoc(docRef, payload)
         .then(() => {
+          // Sincronizamos la colección de acceso administrativo (usuarios)
           if (payload.rol === 'Administrador' || payload.rol === 'Gestor de Proyecto') {
             setDoc(doc(db, 'usuarios', trabajadorSeleccionadoId), {
               email: payload.correo,
@@ -151,10 +149,12 @@ export default function TrabajadoresPage() {
               nombre: payload.nombre,
               role: payload.rol
             }, { merge: true })
+          } else {
+            // Si el rol cambia a uno no administrativo, podríamos opcionalmente eliminar el acceso
+            // deleteDoc(doc(db, 'usuarios', trabajadorSeleccionadoId))
           }
           toast({ title: "Perfil actualizado" })
           setOpenDialog(false)
-          setTimeout(() => window.location.reload(), 800)
         })
         .catch(async (err) => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -182,7 +182,6 @@ export default function TrabajadoresPage() {
           }
           toast({ title: "Trabajador registrado" })
           setOpenDialog(false)
-          setTimeout(() => window.location.reload(), 800)
         })
         .catch(async (err) => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -220,8 +219,9 @@ export default function TrabajadoresPage() {
     const docRef = doc(db, 'trabajadores', id)
     deleteDoc(docRef)
       .then(() => {
+        // También eliminamos su acceso administrativo si existía
+        deleteDoc(doc(db, 'usuarios', id))
         toast({ title: "Trabajador eliminado" })
-        setTimeout(() => window.location.reload(), 800)
       })
       .catch(async (err) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
