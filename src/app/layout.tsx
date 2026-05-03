@@ -1,7 +1,7 @@
 
 import type {Metadata} from 'next';
 import './globals.css';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
@@ -35,6 +35,12 @@ export default function RootLayout({
               <SidebarProvider>
                 <AppSidebar />
                 <SidebarInset>
+                  <header className="flex h-16 shrink-0 items-center gap-2 border-b border-primary/5 px-4 md:hidden">
+                    <SidebarTrigger className="-ml-1 text-primary" />
+                    <div className="flex-1 flex justify-center">
+                       <span className="text-sm font-black text-primary uppercase tracking-widest">Gestor Stock</span>
+                    </div>
+                  </header>
                   <main className="flex-1 overflow-y-auto p-4 md:p-8">
                     {children}
                   </main>

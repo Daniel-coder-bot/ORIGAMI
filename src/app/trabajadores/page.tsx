@@ -38,7 +38,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import {
@@ -245,155 +244,46 @@ export default function TrabajadoresPage() {
           <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Administra el equipo y roles.</p>
         </div>
         
-        <div className="flex flex-wrap gap-2">
-          <Dialog open={openRoleDialog} onOpenChange={setOpenRoleDialog}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="h-12 px-6 rounded-2xl border-primary/20 text-primary font-bold hover:bg-primary/5">
-                <Briefcase strokeWidth={1.5} className="mr-2 h-5 w-5" /> Gestionar Cargos
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[450px] rounded-[2rem] border-none shadow-2xl">
-              <DialogHeader>
-                <DialogTitle className="font-bold">Cargos del Sistema</DialogTitle>
-                <DialogDescription>Define los roles disponibles para el personal.</DialogDescription>
-              </DialogHeader>
-              <div className="py-4 space-y-6">
-                <div className="flex gap-2">
-                  <Input 
-                    value={nuevoCargo} 
-                    onChange={(e) => setNuevoCargo(e.target.value)} 
-                    placeholder="Nuevo cargo..." 
-                    className="h-12 rounded-xl"
-                  />
-                  <Button onClick={manejarCrearCargo} className="rounded-xl h-12 w-12 bg-primary">
-                    <Plus className="h-5 w-5" />
-                  </Button>
-                </div>
-                
-                <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
-                  {/* Roles fijos */}
-                  {PROTECTED_ROLES.map((role) => (
-                    <div key={role} className="flex items-center justify-between p-3 bg-muted/10 rounded-2xl opacity-60">
-                      <span className="font-bold text-sm pl-2">{role}</span>
-                      <Badge variant="outline" className="text-[9px] uppercase">Sistema</Badge>
-                    </div>
-                  ))}
-                  {/* Roles personalizados */}
-                  {(rolesList || []).map((rol: any) => (
-                    <div key={rol.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-2xl group transition-all hover:bg-muted/50">
-                      {cargoEditandoId === rol.id ? (
-                        <div className="flex flex-1 gap-2 animate-in slide-in-from-left-2">
-                          <Input 
-                            value={nombreCargoEdit} 
-                            onChange={(e) => setNombreCargoEdit(e.target.value)} 
-                            className="h-9 rounded-lg" 
-                            autoFocus
-                          />
-                          <Button size="sm" onClick={guardarEdicionCargo} className="h-9 w-9 bg-green-600 hover:bg-green-700">
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setCargoEditandoId(null)} className="h-9 w-9">
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <>
-                          <span className="font-bold text-sm pl-2">{rol.nombre}</span>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => manejarEditarCargo(rol)}>
-                              <PenLine className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-red-50" onClick={() => eliminarCargo(rol.id, rol.nombre)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Button onClick={abrirDialogNuevo} className="bg-primary font-bold h-12 px-8 rounded-2xl">
-            <Plus strokeWidth={2.5} className="mr-2 h-5 w-5" /> Registrar Persona
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={() => setOpenRoleDialog(true)} className="h-12 px-6 rounded-2xl border-primary/20 text-primary font-bold hover:bg-primary/5 w-full sm:w-auto">
+            <Briefcase strokeWidth={1.5} className="mr-2 h-5 w-5" /> Gestionar Cargos
           </Button>
 
-          <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-            <DialogContent className="sm:max-w-[500px] rounded-[2rem] border-none shadow-2xl p-10">
-              <DialogHeader>
-                <DialogTitle className="text-primary font-bold text-xl">{isEditando ? 'Editar Trabajador' : 'Nuevo Colaborador'}</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-6 py-4">
-                <div className="grid gap-2">
-                  <Label className="font-bold text-[10px] uppercase">Nombre Completo</Label>
-                  <Input value={formTrabajador.nombre} onChange={(e) => setFormTrabajador({...formTrabajador, nombre: e.target.value})} className="h-12 rounded-xl font-bold" />
-                </div>
-                <div className="grid gap-2">
-                  <Label className="font-bold text-[10px] uppercase">Correo</Label>
-                  <Input type="email" value={formTrabajador.correo} onChange={(e) => setFormTrabajador({...formTrabajador, correo: e.target.value})} className="h-12 rounded-xl" />
-                </div>
-                <div className="grid gap-2">
-                  <Label className="font-bold text-[10px] uppercase">Cargo</Label>
-                  <Select value={formTrabajador.rol} onValueChange={(val) => setFormTrabajador({...formTrabajador, rol: val})}>
-                    <SelectTrigger className="h-12 rounded-xl">
-                      <SelectValue placeholder="Seleccionar..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Administrador" className="font-bold">Administrador</SelectItem>
-                      <SelectItem value="Gestor de Proyecto" className="font-bold">Gestor de Proyecto</SelectItem>
-                      <SelectItem value="Trabajador" className="font-bold">Trabajador</SelectItem>
-                      {(rolesList || []).map((rol: any) => (
-                        <SelectItem key={rol.id} value={rol.nombre} className="font-bold">{rol.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {(formTrabajador.rol === 'Administrador' || formTrabajador.rol === 'Gestor de Proyecto') && (
-                  <div className="grid gap-2">
-                    <Label className="font-bold text-[10px] uppercase text-primary">Contraseña de acceso</Label>
-                    <Input type="password" value={formTrabajador.password} onChange={(e) => setFormTrabajador({...formTrabajador, password: e.target.value})} className="h-12 rounded-xl" />
-                  </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button onClick={manejarGuardarTrabajador} className="bg-primary font-bold h-12 w-full rounded-xl shadow-lg">Confirmar</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button onClick={abrirDialogNuevo} className="bg-primary font-bold h-12 px-8 rounded-2xl w-full sm:w-auto shadow-lg shadow-primary/20">
+            <Plus strokeWidth={2.5} className="mr-2 h-5 w-5" /> Registrar Persona
+          </Button>
         </div>
       </div>
 
       <div className="relative w-full md:max-w-md">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar..." className="pl-12 h-14 rounded-2xl bg-white shadow-sm border-none font-medium" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+        <Input placeholder="Buscar por nombre o correo..." className="pl-12 h-14 rounded-2xl bg-white shadow-sm border-none font-medium" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
       </div>
 
-      <Card className="border-none shadow-sm overflow-hidden bg-white rounded-[2rem]">
-        <CardContent className="p-0">
+      <Card className="border-none shadow-sm overflow-hidden bg-white rounded-[1.5rem] md:rounded-[2rem]">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader className="bg-muted/30">
               <TableRow className="border-none">
-                <TableHead className="font-black text-[10px] uppercase tracking-widest py-6 px-10">Trabajador</TableHead>
+                <TableHead className="font-black text-[10px] uppercase tracking-widest py-6 px-6 md:px-10">Trabajador</TableHead>
                 <TableHead className="font-black text-[10px] uppercase tracking-widest">Cargo</TableHead>
                 <TableHead className="font-black text-[10px] uppercase tracking-widest">Estado</TableHead>
-                <TableHead className="text-right font-black text-[10px] uppercase tracking-widest pr-10">Acciones</TableHead>
+                <TableHead className="text-right font-black text-[10px] uppercase tracking-widest pr-6 md:pr-10">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={4} className="h-48 text-center animate-pulse">Cargando equipo...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="h-48 text-center animate-pulse font-black text-xs uppercase tracking-widest">Sincronizando equipo...</TableCell></TableRow>
               ) : filtrados.length > 0 ? filtrados.map((t: any) => (
                 <TableRow key={t.id} className="hover:bg-primary/5 border-muted/20">
-                  <TableCell className="py-6 px-10">
+                  <TableCell className="py-6 px-6 md:px-10">
                     <div className="flex flex-col">
                       <span className="font-bold text-sm">{t.nombre}</span>
                       <span className="text-[10px] text-muted-foreground uppercase">{t.correo}</span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="font-bold text-[10px]">{t.rol}</Badge>
+                    <Badge variant="outline" className="font-bold text-[10px] whitespace-nowrap">{t.rol}</Badge>
                   </TableCell>
                   <TableCell>
                     {t.activo ? (
@@ -402,7 +292,7 @@ export default function TrabajadoresPage() {
                       <span className="text-red-500 font-bold text-[10px] bg-red-50 px-3 py-1 rounded-full uppercase">Suspendido</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right pr-10">
+                  <TableCell className="text-right pr-6 md:pr-10">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-10 w-10 p-0 rounded-full">
@@ -427,6 +317,115 @@ export default function TrabajadoresPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Dialogos de Cargos */}
+      <Dialog open={openRoleDialog} onOpenChange={setOpenRoleDialog}>
+        <DialogContent className="sm:max-w-[450px] w-[95vw] rounded-[2rem] border-none shadow-2xl overflow-y-auto max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="font-bold text-primary">Cargos del Sistema</DialogTitle>
+            <DialogDescription className="font-medium text-xs">Define los roles disponibles para el personal.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-6">
+            <div className="flex gap-2">
+              <Input 
+                value={nuevoCargo} 
+                onChange={(e) => setNuevoCargo(e.target.value)} 
+                placeholder="Nuevo cargo..." 
+                className="h-12 rounded-xl font-bold"
+              />
+              <Button onClick={manejarCrearCargo} className="rounded-xl h-12 w-12 bg-primary">
+                <Plus className="h-5 w-5" />
+              </Button>
+            </div>
+            
+            <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
+              {PROTECTED_ROLES.map((role) => (
+                <div key={role} className="flex items-center justify-between p-3 bg-muted/10 rounded-2xl opacity-60">
+                  <span className="font-bold text-sm pl-2">{role}</span>
+                  <Badge variant="outline" className="text-[9px] uppercase font-black">Sistema</Badge>
+                </div>
+              ))}
+              {(rolesList || []).map((rol: any) => (
+                <div key={rol.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-2xl group transition-all hover:bg-muted/50">
+                  {cargoEditandoId === rol.id ? (
+                    <div className="flex flex-1 gap-2 animate-in slide-in-from-left-2">
+                      <Input 
+                        value={nombreCargoEdit} 
+                        onChange={(e) => setNombreCargoEdit(e.target.value)} 
+                        className="h-9 rounded-lg font-bold" 
+                        autoFocus
+                      />
+                      <Button size="sm" onClick={guardarEdicionCargo} className="h-9 w-9 bg-green-600 hover:bg-green-700">
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setCargoEditandoId(null)} className="h-9 w-9">
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="font-bold text-sm pl-2">{rol.nombre}</span>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => manejarEditarCargo(rol)}>
+                          <PenLine className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-red-50" onClick={() => eliminarCargo(rol.id, rol.nombre)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialogo de Trabajador */}
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="sm:max-w-[500px] w-[95vw] rounded-[2rem] border-none shadow-2xl p-6 md:p-10 overflow-y-auto max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="text-primary font-bold text-xl">{isEditando ? 'Editar Trabajador' : 'Nuevo Colaborador'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-6 py-4">
+            <div className="grid gap-2">
+              <Label className="font-black text-[10px] uppercase tracking-widest text-muted-foreground">Nombre Completo</Label>
+              <Input value={formTrabajador.nombre} onChange={(e) => setFormTrabajador({...formTrabajador, nombre: e.target.value})} className="h-12 rounded-xl font-bold" placeholder="Ej: Juan Pérez" />
+            </div>
+            <div className="grid gap-2">
+              <Label className="font-black text-[10px] uppercase tracking-widest text-muted-foreground">Correo Electrónico</Label>
+              <Input type="email" value={formTrabajador.correo} onChange={(e) => setFormTrabajador({...formTrabajador, correo: e.target.value})} className="h-12 rounded-xl font-bold" placeholder="juan.perez@empresa.com" />
+            </div>
+            <div className="grid gap-2">
+              <Label className="font-black text-[10px] uppercase tracking-widest text-muted-foreground">Cargo Asignado</Label>
+              <Select value={formTrabajador.rol} onValueChange={(val) => setFormTrabajador({...formTrabajador, rol: val})}>
+                <SelectTrigger className="h-12 rounded-xl font-bold">
+                  <SelectValue placeholder="Seleccionar rol..." />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-none shadow-2xl">
+                  <SelectItem value="Administrador" className="font-bold">Administrador</SelectItem>
+                  <SelectItem value="Gestor de Proyecto" className="font-bold">Gestor de Proyecto</SelectItem>
+                  <SelectItem value="Trabajador" className="font-bold">Trabajador</SelectItem>
+                  {(rolesList || []).map((rol: any) => (
+                    <SelectItem key={rol.id} value={rol.nombre} className="font-bold">{rol.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {(formTrabajador.rol === 'Administrador' || formTrabajador.rol === 'Gestor de Proyecto') && (
+              <div className="grid gap-2 p-4 bg-primary/5 rounded-2xl">
+                <Label className="font-black text-[10px] uppercase tracking-widest text-primary">Contraseña de acceso</Label>
+                <Input type="password" value={formTrabajador.password} onChange={(e) => setFormTrabajador({...formTrabajador, password: e.target.value})} className="h-12 rounded-xl font-bold bg-white" placeholder="••••••••" />
+                <p className="text-[9px] font-bold text-muted-foreground uppercase mt-2">Requerido para el inicio de sesión del sistema.</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="mt-4">
+            <Button onClick={manejarGuardarTrabajador} className="bg-primary font-black uppercase tracking-widest h-14 w-full rounded-2xl shadow-lg shadow-primary/20">Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
