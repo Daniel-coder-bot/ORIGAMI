@@ -11,9 +11,9 @@
     "prefix": ""
   },
   "aliases": {
-    "components": "@/components",
+    "components": "@/vista",
     "utils": "@/lib/utils",
-    "ui": "@/components/ui",
+    "ui": "@/vista/ui",
     "lib": "@/lib",
     "hooks": "@/hooks"
   },

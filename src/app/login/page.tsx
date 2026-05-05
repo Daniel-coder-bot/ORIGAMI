@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -28,7 +27,7 @@ export default function LoginPage() {
   const { data: workersData } = useCollection(trabajadoresRef);
   const workers = workersData || [];
 
-  // Función de auto-reparación: Sincroniza el usuario administrativo con el perfil de trabajador
+  // Función de auto-reparación dinámica
   useEffect(() => {
     if (!db) return;
     
@@ -41,11 +40,9 @@ export default function LoginPage() {
           const docRef = snap.docs[0].ref;
           const data = snap.docs[0].data();
           
-          // Solo actualizamos si es necesario o si no existe en la colección de usuarios
-          // Usamos la contraseña del documento de trabajador para que sea dinámica
           await setDoc(doc(db, 'usuarios', docRef.id), {
             email: data.correo || 'mauricio@admin.com',
-            password: data.password || '1234', // Usa la contraseña del trabajador o '1234' si no hay una
+            password: data.password || '1234',
             nombre: data.nombre,
             role: 'Administrador'
           }, { merge: true });
@@ -64,7 +61,6 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Búsqueda por correo y contraseña
       let q = query(
         collection(db, 'usuarios'), 
         where('email', '==', identifier),
@@ -72,7 +68,6 @@ export default function LoginPage() {
       );
       let snapshot = await getDocs(q);
 
-      // Si no encuentra por correo, intenta por nombre (identificador)
       if (snapshot.empty) {
         q = query(
           collection(db, 'usuarios'), 
