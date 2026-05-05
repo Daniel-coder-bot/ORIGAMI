@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useMemo } from 'react'
@@ -10,7 +9,9 @@ import {
   Zap,
   Activity,
   BarChart,
-  ClipboardList
+  ClipboardList,
+  Target,
+  Award
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { 
@@ -23,11 +24,11 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase'
 import { collection } from 'firebase/firestore'
 
 const COLORS = [
-  'hsl(var(--primary))', 
-  'hsl(var(--accent))', 
-  'hsl(var(--chart-3))', 
-  'hsl(var(--chart-4))', 
-  'hsl(var(--chart-5))'
+  '#0B3C6D', // Azul principal
+  '#2ECC71', // Verde principal
+  '#1F5A8C', // Azul secundario
+  '#27AE60', // Verde secundario
+  '#34495E'  // Gris azulado
 ];
 
 export default function AnalisisPersonalPage() {
@@ -86,92 +87,92 @@ export default function AnalisisPersonalPage() {
   }, [trabajadores, movimientos])
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-primary/10">
-              <TrendingUp strokeWidth={1.5} className="h-6 w-6 text-primary" />
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-2xl bg-secondary text-white shadow-xl shadow-secondary/10">
+              <Target strokeWidth={2} className="h-6 w-6" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">Evaluación de Desempeño</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-secondary">Rendimiento Operativo</h1>
           </div>
-          <p className="text-sm md:text-base text-muted-foreground font-medium pl-14">Métricas de carga de trabajo y productividad real por colaborador.</p>
+          <p className="text-sm font-medium text-muted-foreground pl-14">Análisis estratégico de productividad por colaborador.</p>
         </div>
       </div>
 
       <div className="space-y-4">
         <div className="flex items-center gap-2 px-1">
-          <Activity className="h-4 w-4 text-primary/60" />
-          <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Indicadores</h2>
+          <Activity className="h-4 w-4 text-primary" />
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-secondary/60">Indicadores de Desempeño</h2>
         </div>
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-          <Card className="border-none bg-white shadow-sm overflow-hidden rounded-3xl">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-3">
+          <Card className="border-none bg-white shadow-sm overflow-hidden rounded-[2rem] group hover:shadow-lg transition-all">
             <CardHeader className="pb-2 px-8 pt-8">
                <div className="flex items-center justify-between">
-                  <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Volumen Global</CardTitle>
-                  <div className="p-2 rounded-xl bg-primary/5 text-primary">
-                      <Box strokeWidth={1.5} className="h-5 w-5" />
+                  <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Volumen Total</CardTitle>
+                  <div className="p-2.5 rounded-xl bg-primary/5 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                      <Box strokeWidth={2} className="h-5 w-5" />
                   </div>
                </div>
             </CardHeader>
             <CardContent className="px-8 pb-8">
-              <div className="text-4xl font-black text-primary">
+              <div className="text-4xl font-bold text-secondary">
                 {loadingMov ? "..." : stats.volumenTotalGlobal}
               </div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Unidades totales gestionadas</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase mt-2 tracking-tight">Unidades gestionadas</p>
             </CardContent>
           </Card>
 
-          <Card className="border-none bg-white shadow-sm overflow-hidden rounded-3xl">
+          <Card className="border-none bg-white shadow-sm overflow-hidden rounded-[2rem] group hover:shadow-lg transition-all">
             <CardHeader className="pb-2 px-8 pt-8">
                <div className="flex items-center justify-between">
-                  <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Operaciones</CardTitle>
-                  <div className="p-2 rounded-xl bg-accent/5 text-accent">
-                      <Zap strokeWidth={1.5} className="h-5 w-5" />
+                  <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Operaciones</CardTitle>
+                  <div className="p-2.5 rounded-xl bg-accent/5 text-accent group-hover:bg-accent group-hover:text-white transition-colors">
+                      <Zap strokeWidth={2} className="h-5 w-5" />
                   </div>
                </div>
             </CardHeader>
             <CardContent className="px-8 pb-8">
-              <div className="text-4xl font-black text-accent">
+              <div className="text-4xl font-bold text-accent">
                 {loadingMov ? "..." : stats.totalMovimientosGlobal}
               </div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Registros de actividad</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase mt-2 tracking-tight">Registros realizados</p>
             </CardContent>
           </Card>
 
-          <Card className="border-none bg-white shadow-sm overflow-hidden rounded-3xl">
+          <Card className="border-none bg-white shadow-sm overflow-hidden rounded-[2rem] group hover:shadow-lg transition-all">
             <CardHeader className="pb-2 px-8 pt-8">
                <div className="flex items-center justify-between">
-                  <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Personal Activo</CardTitle>
-                  <div className="p-2 rounded-xl bg-muted/50 text-muted-foreground">
-                      <Users strokeWidth={1.5} className="h-5 w-5" />
+                  <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Personal</CardTitle>
+                  <div className="p-2.5 rounded-xl bg-secondary/5 text-secondary group-hover:bg-secondary group-hover:text-white transition-colors">
+                      <Users strokeWidth={2} className="h-5 w-5" />
                   </div>
                </div>
             </CardHeader>
             <CardContent className="px-8 pb-8">
-              <div className="text-4xl font-black text-muted-foreground">
+              <div className="text-4xl font-bold text-secondary">
                 {loadingTrab ? "..." : trabajadores.length}
               </div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Colaboradores en sistema</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase mt-2 tracking-tight">Miembros del equipo</p>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-4">
           <div className="flex items-center gap-2 px-1">
-            <BarChart3 className="h-4 w-4 text-primary/60" />
-            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Estadísticas</h2>
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-secondary/60">Estadísticas Comparativas</h2>
           </div>
-          <Card className="bg-white border-none shadow-sm overflow-hidden rounded-3xl h-full">
+          <Card className="bg-white border-none shadow-sm overflow-hidden rounded-[2rem] h-full">
             <CardHeader className="p-8">
-              <CardTitle className="flex items-center gap-2 text-primary font-black text-lg uppercase tracking-tight">
-                <BarChart3 strokeWidth={1.5} className="h-6 w-6" /> Líderes de Volumen
+              <CardTitle className="flex items-center gap-3 text-secondary font-bold text-xl">
+                <Award strokeWidth={2} className="h-6 w-6 text-primary" /> Líderes de Volumen
               </CardTitle>
-              <CardDescription className="text-xs md:text-sm font-medium">Top 5 colaboradores por unidades gestionadas.</CardDescription>
+              <CardDescription className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Top 5 colaboradores por unidades gestionadas</CardDescription>
             </CardHeader>
-            <CardContent className="h-[300px] md:h-[400px] p-4">
+            <CardContent className="h-[400px] p-6">
               {stats.top5.length > 0 ? (
                 <ChartContainer config={{ volume: { label: "Volumen", color: "hsl(var(--primary))" } }} className="h-full w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -182,13 +183,13 @@ export default function AnalisisPersonalPage() {
                         dataKey="nombre" 
                         type="category" 
                         fontSize={10} 
-                        fontFamily="Inter"
-                        fontWeight="bold"
+                        fontFamily="Poppins"
+                        fontWeight="600"
                         axisLine={false}
                         tickLine={false}
                       />
                       <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar dataKey="volumenTotal" fill="hsl(var(--primary))" radius={[0, 8, 8, 0]}>
+                      <Bar dataKey="volumenTotal" radius={[0, 10, 10, 0]} barSize={30}>
                         {stats.top5.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
@@ -199,7 +200,7 @@ export default function AnalisisPersonalPage() {
               ) : (
                 <div className="h-full flex flex-col items-center justify-center opacity-20">
                   <BarChart3 strokeWidth={1} className="h-24 w-24 mb-4" />
-                  <p className="font-black text-xs uppercase tracking-widest">Sin datos suficientes</p>
+                  <p className="font-bold text-[10px] uppercase tracking-[0.3em]">Sin datos disponibles</p>
                 </div>
               )}
             </CardContent>
@@ -208,45 +209,45 @@ export default function AnalisisPersonalPage() {
 
         <div className="space-y-4">
           <div className="flex items-center gap-2 px-1">
-            <ClipboardList className="h-4 w-4 text-primary/60" />
-            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Comparativas</h2>
+            <ClipboardList className="h-4 w-4 text-accent" />
+            <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-secondary/60">Desglose Corporativo</h2>
           </div>
-          <Card className="bg-white border-none shadow-sm overflow-hidden rounded-3xl">
+          <Card className="bg-white border-none shadow-sm overflow-hidden rounded-[2rem]">
             <CardHeader className="p-8 pb-4">
-              <CardTitle className="flex items-center gap-2 text-primary font-black text-lg uppercase tracking-tight">
-                <Users strokeWidth={1.5} className="h-6 w-6" /> Desglose por Colaborador
+              <CardTitle className="flex items-center gap-3 text-secondary font-bold text-xl">
+                <Users strokeWidth={2} className="h-6 w-6 text-accent" /> Análisis Detallado
               </CardTitle>
-              <CardDescription className="text-xs md:text-sm font-medium">Detalle de actividad y materiales manipulados.</CardDescription>
+              <CardDescription className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Métricas individuales de productividad</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="divide-y divide-primary/5">
+              <div className="divide-y divide-border saas-table">
                 {stats.dataArray.slice(0, 10).map((item, idx) => (
-                  <div key={idx} className="p-6 flex items-center justify-between hover:bg-muted/5 transition-colors">
+                  <div key={idx} className="p-6 flex items-center justify-between group transition-colors">
                     <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary font-black text-xs">
+                      <div className="h-11 w-11 rounded-xl bg-secondary text-white flex items-center justify-center font-bold text-sm shadow-md shadow-secondary/10 group-hover:scale-110 transition-transform">
                         {item.nombre ? item.nombre.charAt(0) : '?'}
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-bold text-sm text-foreground">{item.nombre}</span>
-                        <span className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter">{item.rol}</span>
+                        <span className="font-bold text-sm text-secondary">{item.nombre}</span>
+                        <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-tighter">{item.rol}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-8">
                       <div className="text-right">
-                        <span className="block font-black text-sm text-primary">{item.volumenTotal}</span>
-                        <span className="text-[9px] font-black uppercase text-muted-foreground">Unidades</span>
+                        <span className="block font-bold text-base text-primary">{item.volumenTotal}</span>
+                        <span className="text-[9px] font-bold uppercase text-muted-foreground tracking-widest">Unidades</span>
                       </div>
                       <div className="text-right min-w-[60px]">
-                        <span className="block font-black text-sm text-accent">{item.totalMovimientos}</span>
-                        <span className="text-[9px] font-black uppercase text-muted-foreground">Ops.</span>
+                        <span className="block font-bold text-base text-accent">{item.totalMovimientos}</span>
+                        <span className="text-[9px] font-bold uppercase text-muted-foreground tracking-widest">Operaciones</span>
                       </div>
                     </div>
                   </div>
                 ))}
-                {(loadingTrab || loadingMov) && <div className="p-12 text-center animate-pulse">Analizando registros...</div>}
+                {(loadingTrab || loadingMov) && <div className="p-12 text-center animate-pulse text-muted-foreground font-semibold">Procesando reportes...</div>}
                 {!loadingTrab && !loadingMov && stats.dataArray.length === 0 && (
-                  <div className="p-12 text-center text-muted-foreground opacity-30 font-black uppercase text-xs tracking-widest">
-                    No hay movimientos registrados
+                  <div className="p-16 text-center text-muted-foreground opacity-30 font-bold uppercase text-[10px] tracking-widest">
+                    No se han registrado movimientos
                   </div>
                 )}
               </div>

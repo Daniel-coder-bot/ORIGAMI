@@ -4,93 +4,84 @@
 
 @layer base {
   :root {
-    /* Paleta Pastel Salvia / Bosque */
-    --background: 140 15% 96%;
-    --foreground: 147 12% 15%;
+    /* Paleta SyncStock Corporativa */
+    --background: 220 23% 97%; /* #F5F7FA */
+    --foreground: 0 0% 10%;    /* #1A1A1A */
     
     --card: 0 0% 100%;
-    --card-foreground: 147 12% 15%;
+    --card-foreground: 0 0% 10%;
     
     --popover: 0 0% 100%;
-    --popover-foreground: 147 12% 15%;
+    --popover-foreground: 0 0% 10%;
     
-    /* El verde más oscuro de la imagen para el color primario */
-    --primary: 147 12% 23%;
-    --primary-foreground: 140 15% 98%;
+    /* Verde principal para botones y éxitos */
+    --primary: 145 63% 49%; /* #2ECC71 */
+    --primary-foreground: 0 0% 100%;
     
-    /* El verde intermedio para acentos */
-    --accent: 140 22% 70%;
-    --accent-foreground: 147 12% 20%;
+    /* Azul principal para estructura y secundarios */
+    --secondary: 210 82% 24%; /* #0B3C6D */
+    --secondary-foreground: 0 0% 100%;
     
-    /* El verde claro para elementos secundarios */
-    --secondary: 138 26% 83%;
-    --secondary-foreground: 147 12% 25%;
+    --muted: 220 15% 92%;
+    --muted-foreground: 210 20% 40%;
     
-    --muted: 140 10% 88%;
-    --muted-foreground: 147 8% 41%;
+    /* Azul secundario para acentos */
+    --accent: 208 64% 34%; /* #1F5A8C */
+    --accent-foreground: 0 0% 100%;
     
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive-foreground: 210 20% 98%;
     
-    --border: 140 10% 82%;
-    --input: 140 10% 82%;
-    --ring: 147 12% 23%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 145 63% 49%;
     
-    --radius: 1.25rem;
+    --radius: 0.75rem;
 
-    --chart-1: 147 12% 23%;
-    --chart-2: 140 22% 70%;
-    --chart-3: 138 26% 83%;
-    --chart-4: 147 8% 41%;
-    --chart-5: 140 15% 55%;
+    --chart-1: 145 63% 49%;
+    --chart-2: 210 82% 24%;
+    --chart-3: 208 64% 34%;
+    --chart-4: 145 63% 42%;
+    --chart-5: 220 20% 50%;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 147 12% 20%;
-    --sidebar-primary: 147 12% 23%;
+    --sidebar-background: 210 82% 24%; /* Azul Corporativo Oscuro */
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 145 63% 49%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 140 20% 94%;
-    --sidebar-accent-foreground: 147 12% 23%;
-    --sidebar-border: 140 10% 90%;
-    --sidebar-ring: 147 12% 23%;
+    --sidebar-accent: 208 64% 34%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 210 80% 20%;
+    --sidebar-ring: 145 63% 49%;
   }
 
   .dark {
-    --background: 147 12% 10%;
-    --foreground: 140 15% 95%;
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
     
-    --card: 147 12% 12%;
-    --card-foreground: 140 15% 95%;
+    --card: 224 71% 4%;
+    --card-foreground: 213 31% 91%;
     
-    --popover: 147 12% 12%;
-    --popover-foreground: 140 15% 95%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 213 31% 91%;
     
-    --primary: 140 22% 70%;
-    --primary-foreground: 147 12% 10%;
+    --primary: 145 63% 49%;
+    --primary-foreground: 144 100% 11%;
     
-    --secondary: 147 8% 25%;
-    --secondary-foreground: 140 15% 90%;
+    --secondary: 215 27.9% 16.9%;
+    --secondary-foreground: 210 40% 98%;
     
-    --muted: 147 8% 20%;
-    --muted-foreground: 140 10% 70%;
+    --muted: 223 47% 11%;
+    --muted-foreground: 215.4 16.3% 56.9%;
     
-    --accent: 147 12% 35%;
-    --accent-foreground: 140 15% 95%;
+    --accent: 216 34% 17%;
+    --accent-foreground: 210 40% 98%;
     
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive-foreground: 210 40% 98%;
     
-    --border: 147 8% 20%;
-    --input: 147 8% 20%;
-    --ring: 140 22% 70%;
-    
-    --sidebar-background: 147 12% 8%;
-    --sidebar-foreground: 140 15% 90%;
-    --sidebar-primary: 140 22% 70%;
-    --sidebar-primary-foreground: 147 12% 10%;
-    --sidebar-accent: 147 12% 15%;
-    --sidebar-accent-foreground: 140 22% 70%;
-    --sidebar-border: 147 8% 18%;
-    --sidebar-ring: 140 22% 70%;
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+    --ring: 224 76.3% 48%;
   }
 }
 
@@ -102,4 +93,12 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+}
+
+/* Tablas Estilo SaaS */
+.saas-table tr:nth-child(even) {
+  @apply bg-muted/20;
+}
+.saas-table tr {
+  @apply transition-colors hover:bg-muted/50;
 }

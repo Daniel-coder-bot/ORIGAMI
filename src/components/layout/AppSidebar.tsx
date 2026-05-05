@@ -1,18 +1,18 @@
-
 "use client"
 
 import * as React from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { 
   LayoutDashboard, 
   Users, 
   Package, 
-  Warehouse,
   History,
   ClipboardList,
   PieChart,
-  LogOut
+  LogOut,
+  ChevronRight
 } from "lucide-react"
 import { useAuth } from "@/context/auth-context"
 
@@ -81,36 +81,43 @@ export function AppSidebar() {
   if (!user) return null
 
   return (
-    <Sidebar variant="sidebar" collapsible="icon" className="border-r border-primary/5">
-      <SidebarHeader className="px-4 py-8">
+    <Sidebar variant="sidebar" collapsible="icon" className="border-r border-sidebar-border">
+      <SidebarHeader className="px-6 py-8">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition-transform hover:scale-105">
-            <Warehouse strokeWidth={1.5} className="h-6 w-6" />
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-lg shadow-black/10 transition-transform hover:scale-105">
+            <Image 
+              src="/images/logo.jpeg" 
+              alt="SyncStock Logo" 
+              width={32} 
+              height={32} 
+              className="object-contain"
+            />
           </div>
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="text-lg font-black tracking-tight text-primary">Gestor Stock</span>
-            <span className="text-[10px] text-muted-foreground uppercase font-black tracking-[0.2em]">{user.role}</span>
+            <span className="text-xl font-bold tracking-tight text-white">SyncStock</span>
+            <span className="text-[9px] text-white/60 uppercase font-bold tracking-[0.25em]">Inventario</span>
           </div>
         </div>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="px-2">
         <SidebarGroup>
-          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden font-black text-[10px] uppercase tracking-widest px-4 mb-4 text-primary/40">Menú Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden font-bold text-[10px] uppercase tracking-[0.3em] px-4 mb-4 text-white/40">Menú Principal</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="gap-2 px-2">
+            <SidebarMenu className="gap-1">
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
                     asChild 
                     isActive={pathname === item.url}
                     tooltip={item.title}
-                    className="h-11 rounded-xl transition-all duration-300 hover:bg-primary/5 data-[active=true]:bg-primary/10 data-[active=true]:text-primary group/item"
+                    className="h-12 rounded-xl transition-all duration-200 hover:bg-white/10 data-[active=true]:bg-primary data-[active=true]:text-white group/item"
                   >
-                    <Link href={item.url} className="flex items-center gap-3">
-                      <div className={`p-1.5 rounded-lg transition-colors ${pathname === item.url ? 'bg-primary/10' : 'group-hover/item:bg-primary/5'}`}>
+                    <Link href={item.url} className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-3">
                         <item.icon strokeWidth={1.5} className="h-5 w-5" />
+                        <span className="font-medium text-sm">{item.title}</span>
                       </div>
-                      <span className="font-bold text-sm">{item.title}</span>
+                      <ChevronRight className={`h-3 w-3 opacity-0 transition-all group-hover/item:opacity-40 group-data-[collapsible=icon]:hidden ${pathname === item.url ? 'hidden' : ''}`} />
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -119,25 +126,29 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t border-primary/5 p-4 flex flex-col gap-4">
-        <div className="group-data-[collapsible=icon]:hidden px-2">
-          <p className="text-[10px] font-black uppercase text-muted-foreground truncate">{user.nombre}</p>
+      <SidebarFooter className="border-t border-white/5 p-4 flex flex-col gap-4">
+        <div className="group-data-[collapsible=icon]:hidden px-2 flex items-center gap-3">
+           <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center font-bold text-xs">
+              {user.nombre.charAt(0)}
+           </div>
+           <div className="flex flex-col min-w-0">
+             <p className="text-xs font-bold text-white truncate">{user.nombre}</p>
+             <p className="text-[9px] text-white/50 uppercase font-bold tracking-tighter">{user.role}</p>
+           </div>
         </div>
-        <SidebarMenu className="px-2">
+        <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton 
               onClick={logout}
-              className="h-11 rounded-xl text-destructive hover:bg-destructive/5 hover:text-destructive"
+              className="h-11 rounded-xl text-white/80 hover:bg-destructive hover:text-white transition-colors"
             >
-              <div className="p-1.5 rounded-lg">
-                <LogOut strokeWidth={1.5} className="h-5 w-5" />
-              </div>
-              <span className="font-bold text-sm">Cerrar Sesión</span>
+              <LogOut strokeWidth={1.5} className="h-5 w-5" />
+              <span className="font-semibold text-sm">Cerrar Sesión</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <div className="px-2 text-[9px] text-muted-foreground font-black uppercase tracking-widest group-data-[collapsible=icon]:hidden">
-          <p>© 2024 Gestor Stock</p>
+        <div className="px-2 text-[8px] text-white/20 font-bold uppercase tracking-[0.2em] group-data-[collapsible=icon]:hidden">
+          <p>© 2024 SyncStock Inventario</p>
         </div>
       </SidebarFooter>
     </Sidebar>
