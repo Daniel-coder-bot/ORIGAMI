@@ -1,3 +1,4 @@
+
 {
   "$schema": "https://ui.shadcn.com/schema.json",
   "style": "default",
@@ -11,9 +12,9 @@
     "prefix": ""
   },
   "aliases": {
-    "components": "@/vista",
+    "components": "@/components",
     "utils": "@/lib/utils",
-    "ui": "@/vista/ui",
+    "ui": "@/components/ui",
     "lib": "@/lib",
     "hooks": "@/hooks"
   },

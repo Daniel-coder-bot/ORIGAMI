@@ -1,3 +1,4 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
@@ -31,13 +32,14 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <AuthProvider>
             <ProtectedRoute>
-              <SidebarProvider>
+              <SidebarProvider defaultOpen={true}>
                 <AppSidebar />
                 <SidebarInset>
-                  <header className="flex h-16 shrink-0 items-center gap-2 border-b border-primary/5 px-4 md:hidden">
-                    <SidebarTrigger className="-ml-1 text-primary" />
-                    <div className="flex-1 flex justify-center">
-                       <span className="text-sm font-black text-primary uppercase tracking-widest">Gestor Stock</span>
+                  <header className="flex h-16 shrink-0 items-center gap-2 border-b border-primary/5 px-4">
+                    <SidebarTrigger className="text-primary" />
+                    <div className="flex-1 flex justify-center md:justify-start">
+                       <span className="text-sm font-black text-primary uppercase tracking-widest hidden md:block">Sistema de Gestión de Inventario</span>
+                       <span className="text-sm font-black text-primary uppercase tracking-widest md:hidden">Gestor Stock</span>
                     </div>
                   </header>
                   <main className="flex-1 overflow-y-auto p-4 md:p-8">
